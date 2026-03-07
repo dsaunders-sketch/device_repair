@@ -899,7 +899,7 @@ async function signIn() {
 
     const { error } = await sb.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: window.location.href }
+        options: { emailRedirectTo: 'https://dsaunders-sketch.github.io/device_repair/' }
     });
 
     if (error) { el.innerHTML = alert_html('err', error.message); }
