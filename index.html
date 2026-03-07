@@ -8,26 +8,30 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
-            --navy: #0f2240;
-            --navy-mid: #1a3a6b;
-            --blue: #2563eb;
-            --blue-light: #dbeafe;
-            --green: #16a34a;
-            --green-light: #dcfce7;
-            --amber: #d97706;
-            --amber-light: #fef3c7;
-            --red: #dc2626;
+            --navy: #123731;
+            --navy-mid: #4E6D41;
+            --blue: #4E6D41;
+            --blue-light: #e8f0e4;
+            --green: #4E6D41;
+            --green-light: #e8f0e4;
+            --amber: #c8911a;
+            --amber-light: #fdf0d5;
+            --red: #b91c1c;
             --red-light: #fee2e2;
-            --purple: #7c3aed;
-            --purple-light: #ede9fe;
-            --slate: #64748b;
-            --border: #e2e8f0;
-            --bg: #f8fafc;
+            --purple: #4E6D41;
+            --purple-light: #e8f0e4;
+            --slate: #5a6e58;
+            --border: #d8e4d4;
+            --bg: #f4f7f2;
             --white: #ffffff;
-            --text: #1e293b;
-            --text-muted: #64748b;
+            --text: #1a2e19;
+            --text-muted: #5a6e58;
             --mono: 'IBM Plex Mono', monospace;
             --sans: 'IBM Plex Sans', sans-serif;
+            --brookwood: #4E6D41;
+            --emerald: #123731;
+            --sage: #9DC88D;
+            --mango: #F1B24A;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -62,14 +66,14 @@
         }
 
         .auth-logo {
-            width: 48px;
-            height: 48px;
-            background: var(--navy);
-            border-radius: 4px;
+            width: 56px;
+            height: 56px;
+            background: var(--emerald);
+            border-radius: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            padding: 8px;
             margin-bottom: 24px;
         }
 
@@ -285,9 +289,9 @@
         }
 
         .cb-item:has(input:checked) {
-            border-color: var(--blue);
+            border-color: var(--brookwood);
             background: var(--blue-light);
-            color: var(--blue);
+            color: var(--brookwood);
         }
 
         /* ── BUTTONS ── */
@@ -327,11 +331,11 @@
             font-family: var(--mono);
         }
 
-        .badge-pending    { background: var(--amber-light); color: var(--amber); }
-        .badge-in-repair  { background: var(--blue-light); color: var(--blue); }
-        .badge-waiting    { background: var(--purple-light); color: var(--purple); }
-        .badge-resolved   { background: var(--green-light); color: var(--green); }
-        .badge-sent-out   { background: #fce7f3; color: #9d174d; }
+        .badge-pending    { background: #fdf0d5; color: #92640e; }
+        .badge-in-repair  { background: #e8f0e4; color: #2d4d28; }
+        .badge-waiting    { background: #fdf0d5; color: #92640e; }
+        .badge-resolved   { background: #d6edd0; color: #1e4a1a; }
+        .badge-sent-out   { background: #f3ece8; color: #7a3520; }
 
         .loaner-tag {
             display: inline-flex;
@@ -341,8 +345,8 @@
             font-size: 11px;
             font-weight: 600;
             font-family: var(--mono);
-            background: var(--amber-light);
-            color: var(--amber);
+            background: #fdf0d5;
+            color: #92640e;
         }
 
         /* ── TABLE ── */
@@ -409,7 +413,7 @@
 
         .stat-box.red { border-left-color: var(--red); }
         .stat-box.green { border-left-color: var(--green); }
-        .stat-box.amber { border-left-color: var(--amber); }
+        .stat-box.amber { border-left-color: var(--mango); }
 
         .stat-num {
             font-size: 30px;
@@ -449,7 +453,7 @@
             letter-spacing: .01em;
         }
 
-        .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+        .tab-btn.active { color: var(--brookwood); border-bottom-color: var(--brookwood); }
         .tab-btn:hover { color: var(--text); }
 
         .tab-panel { display: none; }
@@ -600,7 +604,9 @@
 <!-- ── AUTH ── -->
 <div id="auth-screen" class="auth-screen">
     <div class="auth-card">
-        <div class="auth-logo">🔧</div>
+        <div class="auth-logo">
+            <img src="https://www.brookwood.edu/website-logo.png" alt="Brookwood" style="width:40px; height:40px; object-fit:contain;" />
+        </div>
         <h1>Device Repair Tracker</h1>
         <p class="auth-sub">Brookwood School Technology Department.<br>Sign in with your Brookwood email to continue.</p>
         <div id="auth-alert"></div>
@@ -614,7 +620,7 @@
 
     <div class="header">
         <div class="header-left">
-            <span class="header-icon">🔧</span>
+            <img src="https://www.brookwood.edu/website-logo.png" alt="Brookwood" style="height:28px; object-fit:contain; filter:brightness(0) invert(1);" />
             <div class="header-divider"></div>
             <span class="header-title">Device Repair Tracker</span>
         </div>
