@@ -646,7 +646,16 @@
             <div class="card">
                 <div class="card-title">Student & Device</div>
                 <div id="new-alert"></div>
-                <div class="form-grid">
+
+                <div class="form-group span2" style="margin-bottom:18px;">
+                    <label>Device Source *</label>
+                    <div class="checkbox-row" style="margin-top:4px;">
+                        <label class="cb-item"><input type="radio" name="ni-source" value="student" checked onchange="toggleSource()" style="width:15px;height:15px;padding:0;margin:0;" /><span>Student Device</span></label>
+                        <label class="cb-item"><input type="radio" name="ni-source" value="cart" onchange="toggleSource()" style="width:15px;height:15px;padding:0;margin:0;" /><span>Class Cart</span></label>
+                    </div>
+                </div>
+
+                <div id="student-fields" class="form-grid" style="margin-bottom:0;">
                     <div class="form-group">
                         <label>First Name *</label>
                         <input type="text" id="ni-firstname" placeholder="First name" />
@@ -655,8 +664,25 @@
                         <label>Last Initial *</label>
                         <input type="text" id="ni-lastinitial" placeholder="e.g. S" maxlength="1" style="text-transform:uppercase;" />
                     </div>
+                </div>
+
+                <div id="cart-fields" style="display:none; margin-bottom:0;">
                     <div class="form-group">
-                        <label>Grade *</label>
+                        <label>Cart *</label>
+                        <select id="ni-cart">
+                            <option value="">Select cart...</option>
+                            <option value="Cart: 4th Grade">4th Grade</option>
+                            <option value="Cart: 5-1">5-1</option>
+                            <option value="Cart: 5-2">5-2</option>
+                            <option value="Cart: 6-1">6-1</option>
+                            <option value="Cart: 6-2">6-2</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-grid" style="margin-top:18px;">
+                    <div class="form-group">
+                        <label>Grade</label>
                         <select id="ni-grade">
                             <option value="">Select grade...</option>
                             <option value="5">5th Grade</option>
@@ -946,6 +972,13 @@ document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
 
 // ─── NEW INCIDENT ────────────────────────────────────────────────────────────
 
+function toggleSource() {
+    const isCart = document.querySelector('input[name="ni-source"]:checked').value === 'cart';
+    document.getElementById('student-fields').style.display = isCart ? 'none' : 'grid';
+    document.getElementById('cart-fields').style.display = isCart ? 'block' : 'none';
+    document.getElementById('ni-grade').closest('.form-group').style.display = isCart ? 'none' : '';
+}
+
 function toggleLoanerField() {
     const show = document.getElementById('ni-loaner').checked;
     document.getElementById('loaner-field').style.display = show ? 'flex' : 'none';
@@ -954,6 +987,10 @@ function toggleLoanerField() {
 function clearNewForm() {
     ['ni-firstname','ni-lastinitial','ni-device-id','ni-sn','ni-desc','ni-loaner-sn','ni-notes'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('ni-grade').value = '';
+    document.getElementById('ni-cart').value = '';
+    document.querySelector('input[name="ni-source"][value="student"]').checked = true;
+    document.getElementById('student-fields').style.display = 'grid';
+    document.getElementById('cart-fields').style.display = 'none';
     document.querySelectorAll('.dmg').forEach(c => c.checked = false);
     document.getElementById('ni-loaner').checked = false;
     document.getElementById('loaner-field').style.display = 'none';
@@ -962,15 +999,25 @@ function clearNewForm() {
 
 async function submitIncident() {
     const el = document.getElementById('new-alert');
+    const isCart = document.querySelector('input[name="ni-source"]:checked').value === 'cart';
     const firstName = document.getElementById('ni-firstname').value.trim();
     const lastInitial = document.getElementById('ni-lastinitial').value.trim().toUpperCase();
-    const name = lastInitial ? `${firstName} ${lastInitial}.` : firstName;
+    const cartName = document.getElementById('ni-cart').value;
+    const name = isCart ? cartName : (lastInitial ? `${firstName} ${lastInitial}.` : firstName);
     const grade = document.getElementById('ni-grade').value;
     const sn = document.getElementById('ni-sn').value.trim();
     const dmg = Array.from(document.querySelectorAll('.dmg:checked')).map(c => c.value);
 
-    if (!firstName || !lastInitial || !grade || !sn || !dmg.length) {
+    if (isCart && !cartName) {
+        el.innerHTML = alert_html('err', 'Please select a cart.');
+        return;
+    }
+    if (!isCart && (!firstName || !lastInitial)) {
         el.innerHTML = alert_html('err', 'First name, last initial, grade, serial number, and at least one damage type are required.');
+        return;
+    }
+    if (!sn || !dmg.length) {
+        el.innerHTML = alert_html('err', 'Serial number and at least one damage type are required.');
         return;
     }
 
