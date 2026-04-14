@@ -972,6 +972,12 @@
                     <span>Loaner has been returned</span>
                 </label>
             </div>
+            <div class="form-group" id="m-loaner-sn-group">
+                <label>Loaner Device S/N</label>
+                <select id="m-loaner-sn-sel">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
             <div class="form-group span2">
                 <label>Notes</label>
                 <textarea id="m-notes" placeholder="Additional notes..."></textarea>
@@ -1235,6 +1241,22 @@ async function openModal(id) {
     document.getElementById('m-notes').value = data.notes || '';
     document.getElementById('m-alert').innerHTML = '';
 
+    // Populate loaner device dropdown — show all devices, mark unavailable ones
+    const { data: devices } = await sb.from('loaner_devices').select('*').order('serial_number');
+    const sel = document.getElementById('m-loaner-sn-sel');
+    const group = document.getElementById('m-loaner-sn-group');
+    if (data.loaner_provided) {
+        group.style.display = '';
+        sel.innerHTML = `<option value="">— No loaner / clear —</option>` +
+            (devices || []).map(d => {
+                const label = d.serial_number + (d.asset_tag ? ' — ' + d.asset_tag : '') + (d.available ? '' : ' (out)');
+                const selected = d.id === data.loaner_device_id || d.serial_number === data.loaner_sn ? 'selected' : '';
+                return `<option value="${d.id}" data-sn="${d.serial_number}" ${selected}>${label}</option>`;
+            }).join('');
+    } else {
+        group.style.display = 'none';
+    }
+
     document.getElementById('modal-overlay').classList.add('open');
 }
 
@@ -1246,6 +1268,9 @@ function closeModal() {
 async function saveIncident() {
     const el = document.getElementById('m-alert');
     const loanerBack = document.getElementById('m-loaner-back').checked;
+    const loanerSel = document.getElementById('m-loaner-sn-sel');
+    const loanerDeviceId = loanerSel?.value || null;
+    const loanerSn = loanerSel?.options[loanerSel.selectedIndex]?.dataset?.sn || null;
 
     const updates = {
         status: document.getElementById('m-status').value,
@@ -1254,6 +1279,8 @@ async function saveIncident() {
         repair_action: document.getElementById('m-repair').value.trim() || null,
         date_returned: document.getElementById('m-returned').value || null,
         loaner_returned_at: loanerBack ? new Date().toISOString() : null,
+        loaner_device_id: loanerDeviceId,
+        loaner_sn: loanerSn,
         notes: document.getElementById('m-notes').value.trim() || null,
         updated_at: new Date().toISOString()
     };
