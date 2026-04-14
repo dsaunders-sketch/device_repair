@@ -724,8 +724,10 @@
                         </label>
                     </div>
                     <div class="form-group" id="loaner-field" style="display:none;">
-                        <label>Loaner Serial Number</label>
-                        <input type="text" id="ni-loaner-sn" placeholder="Loaner device S/N" />
+                        <label>Loaner Device</label>
+                        <select id="ni-loaner-sn">
+                            <option value="">Loading available devices...</option>
+                        </select>
                     </div>
                     <div class="form-group span2">
                         <label>Initial Notes</label>
@@ -1066,6 +1068,7 @@ function toggleSource() {
 function toggleLoanerField() {
     const show = document.getElementById('ni-loaner').checked;
     document.getElementById('loaner-field').style.display = show ? 'flex' : 'none';
+    if (show) populateLoanerDropdown('ni-loaner-sn');
 }
 
 function clearNewForm() {
@@ -1106,6 +1109,10 @@ async function submitIncident() {
     }
 
     const loaner = document.getElementById('ni-loaner').checked;
+    const loanerSel = document.getElementById('ni-loaner-sn');
+    const loanerDeviceId = loaner ? loanerSel.value : null;
+    const loanerSn = loaner ? (loanerSel.options[loanerSel.selectedIndex]?.text.split(' —')[0] || null) : null;
+
     const rec = {
         student_name: name,
         student_grade: grade,
@@ -1114,13 +1121,19 @@ async function submitIncident() {
         damage_scope: dmg.join(', '),
         damage_description: document.getElementById('ni-desc').value.trim() || null,
         loaner_provided: loaner,
-        loaner_sn: loaner ? (document.getElementById('ni-loaner-sn').value.trim() || null) : null,
+        loaner_sn: loanerSn,
+        loaner_device_id: loanerDeviceId,
         notes: document.getElementById('ni-notes').value.trim() || null,
         status: 'Pending'
     };
 
     const { error } = await sb.from('incidents').insert(rec);
     if (error) { el.innerHTML = alert_html('err', error.message); return; }
+
+    // Mark loaner device as unavailable in pool
+    if (loanerDeviceId) {
+        await sb.from('loaner_devices').update({ available: false }).eq('id', loanerDeviceId);
+    }
 
     el.innerHTML = alert_html('ok', `Incident logged for ${name}.`);
     clearNewForm();
@@ -1248,6 +1261,14 @@ async function saveIncident() {
     const { error } = await sb.from('incidents').update(updates).eq('id', currentId);
 
     if (error) { el.innerHTML = alert_html('err', error.message); return; }
+
+    // If loaner just marked as returned, free up the device in the pool
+    if (loanerBack) {
+        const { data: incident } = await sb.from('incidents').select('loaner_device_id').eq('id', currentId).single();
+        if (incident?.loaner_device_id) {
+            await sb.from('loaner_devices').update({ available: true }).eq('id', incident.loaner_device_id);
+        }
+    }
 
     el.innerHTML = alert_html('ok', 'Saved.');
     setTimeout(() => { closeModal(); loadOpen(); if (allCache.length) loadAll(); }, 900);
@@ -1436,6 +1457,18 @@ function err_html(msg) { return `<div class="alert alert-err" style="margin:16px
 
 let loanerPool = [];
 
+async function populateLoanerDropdown(selectId) {
+    const { data } = await sb.from('loaner_devices').select('*').eq('available', true).order('serial_number');
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const available = data || [];
+    sel.innerHTML = available.length
+        ? `<option value="">Select a loaner device...</option>` + available.map(d =>
+            `<option value="${d.id}">${d.serial_number}${d.asset_tag ? ' — ' + d.asset_tag : ''}${d.notes ? ' (' + d.notes + ')' : ''}</option>`
+          ).join('')
+        : `<option value="">⚠ No loaners available</option>`;
+}
+
 async function loadLoans() {
     await loadLoanerPool();
     loadPoolBar();
@@ -1446,15 +1479,7 @@ async function loadLoans() {
 async function loadLoanerPool() {
     const { data } = await sb.from('loaner_devices').select('*').order('serial_number');
     loanerPool = data || [];
-    // Populate device dropdown with available devices
-    const sel = document.getElementById('ln-device');
-    if (!sel) return;
-    const available = loanerPool.filter(d => d.available);
-    sel.innerHTML = available.length
-        ? `<option value="">Select a loaner device...</option>` + available.map(d =>
-            `<option value="${d.id}">${d.serial_number}${d.asset_tag ? ' — ' + d.asset_tag : ''}${d.notes ? ' (' + d.notes + ')' : ''}</option>`
-          ).join('')
-        : `<option value="">⚠ No loaners available</option>`;
+    await populateLoanerDropdown('ln-device');
 }
 
 function loadPoolBar() {
