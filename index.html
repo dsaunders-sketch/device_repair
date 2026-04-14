@@ -628,6 +628,7 @@
             <button class="nav-btn active" data-view="new">New Incident</button>
             <button class="nav-btn" data-view="open">Open Cases</button>
             <button class="nav-btn" data-view="all">All Incidents</button>
+            <button class="nav-btn" data-view="loans">Loans</button>
             <button class="nav-btn" data-view="reports">Reports</button>
             <button class="nav-btn sign-out" onclick="signOut()">Sign Out</button>
         </div>
@@ -824,6 +825,88 @@
             </div>
         </div>
 
+        <!-- LOANS -->
+        <div id="view-loans" class="view">
+            <div class="page-header">
+                <div>
+                    <div class="page-title">Loaner Loans</div>
+                    <div class="page-subtitle">Track standalone loaner checkouts — no repair required</div>
+                </div>
+                <button class="btn btn-ghost btn-sm" onclick="loadLoans()">↻ Refresh</button>
+            </div>
+
+            <!-- Pool status bar -->
+            <div id="loan-pool-bar" style="margin-bottom:20px;"></div>
+
+            <!-- Tab bar -->
+            <div class="card">
+                <div class="tab-bar">
+                    <button class="tab-btn active" onclick="switchLoanTab('new', this)">Issue Loan</button>
+                    <button class="tab-btn" onclick="switchLoanTab('active', this)">Active Loans</button>
+                    <button class="tab-btn" onclick="switchLoanTab('history', this)">History</button>
+                </div>
+
+                <!-- Issue loan form -->
+                <div id="ltab-new" class="tab-panel active">
+                    <div id="loan-alert"></div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>First Name *</label>
+                            <input type="text" id="ln-firstname" placeholder="First name" />
+                        </div>
+                        <div class="form-group">
+                            <label>Last Initial *</label>
+                            <input type="text" id="ln-lastinitial" placeholder="e.g. S" maxlength="1" style="text-transform:uppercase;" />
+                        </div>
+                        <div class="form-group">
+                            <label>Grade</label>
+                            <select id="ln-grade">
+                                <option value="">Select grade...</option>
+                                <option value="5">5th Grade</option>
+                                <option value="6">6th Grade</option>
+                                <option value="7">7th Grade</option>
+                                <option value="8">8th Grade</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Reason *</label>
+                            <select id="ln-reason">
+                                <option value="">Select reason...</option>
+                                <option value="Misplaced">Misplaced / Can't find device</option>
+                                <option value="Dead Battery">Dead battery</option>
+                                <option value="Forgotten">Left at home</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group span2">
+                            <label>Loaner Device *</label>
+                            <select id="ln-device">
+                                <option value="">Loading available devices...</option>
+                            </select>
+                        </div>
+                        <div class="form-group span2">
+                            <label>Notes</label>
+                            <textarea id="ln-notes" placeholder="Anything worth noting..." style="height:70px;"></textarea>
+                        </div>
+                    </div>
+                    <div style="margin-top:18px; display:flex; gap:10px;">
+                        <button class="btn btn-primary" onclick="submitLoan()">Issue Loan</button>
+                        <button class="btn btn-ghost" onclick="clearLoanForm()">Clear</button>
+                    </div>
+                </div>
+
+                <!-- Active loans -->
+                <div id="ltab-active" class="tab-panel">
+                    <div id="loan-active-list"><div class="empty"><div class="empty-icon">⏳</div>Loading...</div></div>
+                </div>
+
+                <!-- History -->
+                <div id="ltab-history" class="tab-panel">
+                    <div id="loan-history-list"><div class="empty"><div class="empty-icon">⏳</div>Loading...</div></div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
@@ -964,6 +1047,7 @@ function showView(name) {
     if (name === 'open') loadOpen();
     if (name === 'all') loadAll();
     if (name === 'reports') loadReports();
+    if (name === 'loans') loadLoans();
 }
 
 document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
@@ -1347,6 +1431,172 @@ function alert_html(type, msg) {
 function loading() { return `<div class="empty"><div class="empty-icon">⏳</div>Loading...</div>`; }
 function empty(icon, msg) { return `<div class="empty"><div class="empty-icon">${icon}</div>${msg}</div>`; }
 function err_html(msg) { return `<div class="alert alert-err" style="margin:16px;">${msg}</div>`; }
+
+// ─── LOANS ───────────────────────────────────────────────────────────────────
+
+let loanerPool = [];
+
+async function loadLoans() {
+    await loadLoanerPool();
+    loadPoolBar();
+    loadActiveLoans();
+    loadLoanHistory();
+}
+
+async function loadLoanerPool() {
+    const { data } = await sb.from('loaner_devices').select('*').order('serial_number');
+    loanerPool = data || [];
+    // Populate device dropdown with available devices
+    const sel = document.getElementById('ln-device');
+    if (!sel) return;
+    const available = loanerPool.filter(d => d.available);
+    sel.innerHTML = available.length
+        ? `<option value="">Select a loaner device...</option>` + available.map(d =>
+            `<option value="${d.id}">${d.serial_number}${d.asset_tag ? ' — ' + d.asset_tag : ''}${d.notes ? ' (' + d.notes + ')' : ''}</option>`
+          ).join('')
+        : `<option value="">⚠ No loaners available</option>`;
+}
+
+function loadPoolBar() {
+    const el = document.getElementById('loan-pool-bar');
+    if (!el || !loanerPool.length) return;
+    const total = loanerPool.length;
+    const available = loanerPool.filter(d => d.available).length;
+    const out = total - available;
+    const pct = Math.round((out / total) * 100);
+    const color = available === 0 ? '#dc2626' : available === 1 ? '#d97706' : '#15803d';
+    el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:16px;padding:14px 18px;background:#fff;border:1px solid var(--border);border-radius:8px;border-left:4px solid ${color};">
+            <div style="font-size:28px;font-weight:800;color:${color};font-family:var(--mono);">${available}</div>
+            <div>
+                <div style="font-size:13px;font-weight:700;color:var(--text);">of ${total} loaners available</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${out} currently out${available === 0 ? ' — no spares left' : ''}</div>
+            </div>
+            <div style="flex:1;background:var(--bg-subtle);border-radius:4px;height:6px;overflow:hidden;margin-left:8px;">
+                <div style="height:100%;background:${color};width:${pct}%;border-radius:4px;transition:width .3s;"></div>
+            </div>
+        </div>`;
+}
+
+async function loadActiveLoans() {
+    const el = document.getElementById('loan-active-list');
+    if (!el) return;
+    el.innerHTML = loading();
+    const { data, error } = await sb.from('loaner_loans')
+        .select('*, loaner_devices(serial_number, asset_tag)')
+        .is('returned_at', null)
+        .order('created_at', { ascending: true });
+
+    if (error) { el.innerHTML = err_html(error.message); return; }
+    if (!data?.length) { el.innerHTML = empty('✓', 'No active loans — all devices accounted for.'); return; }
+
+    el.innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>Student</th><th>Grade</th><th>Reason</th><th>Device S/N</th><th>Out Since</th><th>Days Out</th><th></th></tr></thead>
+        <tbody>${data.map(l => {
+            const days = Math.floor((Date.now() - new Date(l.created_at)) / 86400000);
+            const sn = l.loaner_devices?.serial_number || l.loaner_asset_tag || '—';
+            const warn = days >= 3;
+            return `<tr>
+                <td><strong>${esc(l.student_name)}</strong></td>
+                <td>${l.student_grade ? l.student_grade + 'th' : '—'}</td>
+                <td>${esc(l.reason)}</td>
+                <td class="mono">${esc(sn)}</td>
+                <td class="mono">${fdate(l.created_at)}</td>
+                <td><span class="days-out ${warn ? 'days-warn' : ''}">${days}d</span></td>
+                <td><button class="btn btn-ghost btn-sm" onclick="returnLoan('${l.id}','${l.loaner_device_id}')">Return</button></td>
+            </tr>`;
+        }).join('')}</tbody>
+    </table></div>`;
+}
+
+async function loadLoanHistory() {
+    const el = document.getElementById('loan-history-list');
+    if (!el) return;
+    el.innerHTML = loading();
+    const { data, error } = await sb.from('loaner_loans')
+        .select('*, loaner_devices(serial_number, asset_tag)')
+        .not('returned_at', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+    if (error) { el.innerHTML = err_html(error.message); return; }
+    if (!data?.length) { el.innerHTML = empty('📋', 'No loan history yet.'); return; }
+
+    el.innerHTML = `<div class="table-wrap"><table>
+        <thead><tr><th>Student</th><th>Grade</th><th>Reason</th><th>Device S/N</th><th>Issued</th><th>Returned</th></tr></thead>
+        <tbody>${data.map(l => {
+            const sn = l.loaner_devices?.serial_number || '—';
+            return `<tr>
+                <td><strong>${esc(l.student_name)}</strong></td>
+                <td>${l.student_grade ? l.student_grade + 'th' : '—'}</td>
+                <td>${esc(l.reason)}</td>
+                <td class="mono">${esc(sn)}</td>
+                <td class="mono">${fdate(l.created_at)}</td>
+                <td class="mono">${fdate(l.returned_at)}</td>
+            </tr>`;
+        }).join('')}</tbody>
+    </table></div>`;
+}
+
+async function submitLoan() {
+    const alert = document.getElementById('loan-alert');
+    const first = document.getElementById('ln-firstname').value.trim();
+    const last = document.getElementById('ln-lastinitial').value.trim().toUpperCase();
+    const grade = document.getElementById('ln-grade').value;
+    const reason = document.getElementById('ln-reason').value;
+    const deviceId = document.getElementById('ln-device').value;
+    const notes = document.getElementById('ln-notes').value.trim();
+
+    if (!first || !last) { alert.innerHTML = alert_html('err', 'First name and last initial are required.'); return; }
+    if (!reason) { alert.innerHTML = alert_html('err', 'Please select a reason.'); return; }
+    if (!deviceId) { alert.innerHTML = alert_html('err', 'Please select a loaner device.'); return; }
+
+    const { data: { session } } = await sb.auth.getSession();
+    const loggedBy = session?.user?.email || '';
+    const device = loanerPool.find(d => d.id === deviceId);
+
+    const { error: loanErr } = await sb.from('loaner_loans').insert({
+        student_name: first + ' ' + last + '.',
+        student_grade: grade,
+        reason,
+        loaner_device_id: deviceId,
+        loaner_asset_tag: device?.serial_number || '',
+        logged_by: loggedBy,
+        notes
+    });
+    if (loanErr) { alert.innerHTML = alert_html('err', loanErr.message); return; }
+
+    // Mark device unavailable
+    await sb.from('loaner_devices').update({ available: false }).eq('id', deviceId);
+
+    alert.innerHTML = alert_html('ok', `Loan issued to ${first} ${last}. Device ${device?.serial_number} is now checked out.`);
+    clearLoanForm();
+    loadLoans();
+}
+
+async function returnLoan(loanId, deviceId) {
+    if (!confirm('Mark this device as returned?')) return;
+    await sb.from('loaner_loans').update({ returned_at: new Date().toISOString() }).eq('id', loanId);
+    await sb.from('loaner_devices').update({ available: true }).eq('id', deviceId);
+    loadLoans();
+}
+
+function clearLoanForm() {
+    ['ln-firstname','ln-lastinitial','ln-notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('ln-grade').value = '';
+    document.getElementById('ln-reason').value = '';
+    loadLoanerPool(); // refresh dropdown
+}
+
+function switchLoanTab(name, btn) {
+    document.querySelectorAll('#view-loans .tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#view-loans .tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('ltab-' + name).classList.add('active');
+    if (name === 'active') loadActiveLoans();
+    if (name === 'history') loadLoanHistory();
+    if (name === 'new') loadLoanerPool();
+}
 
 init();
 </script>
