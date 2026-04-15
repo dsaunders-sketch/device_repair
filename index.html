@@ -1,1655 +1,678 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brookwood Device Repair Tracker</title>
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        :root {
-            --navy: #123731;
-            --navy-mid: #4E6D41;
-            --blue: #4E6D41;
-            --blue-light: #e8f0e4;
-            --green: #4E6D41;
-            --green-light: #e8f0e4;
-            --amber: #c8911a;
-            --amber-light: #fdf0d5;
-            --red: #b91c1c;
-            --red-light: #fee2e2;
-            --purple: #4E6D41;
-            --purple-light: #e8f0e4;
-            --slate: #5a6e58;
-            --border: #d8e4d4;
-            --bg: #ffffff;
-            --white: #ffffff;
-            --text: #1a2e19;
-            --text-muted: #5a6e58;
-            --mono: 'IBM Plex Mono', monospace;
-            --sans: 'IBM Plex Sans', sans-serif;
-            --brookwood: #4E6D41;
-            --emerald: #123731;
-            --sage: #9DC88D;
-            --mango: #F1B24A;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        body {
-            font-family: var(--sans);
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            font-size: 15px;
-        }
-
-        /* ── AUTH ── */
-        .auth-screen {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            background: var(--navy);
-            background-image:
-                repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,.04) 39px, rgba(255,255,255,.04) 40px),
-                repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(255,255,255,.04) 39px, rgba(255,255,255,.04) 40px);
-        }
-
-        .auth-card {
-            background: var(--white);
-            border-radius: 4px;
-            padding: 48px;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 24px 64px rgba(0,0,0,.4);
-        }
-
-        .auth-logo {
-            width: 56px;
-            height: 56px;
-            background: var(--emerald);
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px;
-            margin-bottom: 24px;
-        }
-
-        .auth-card h1 {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--navy);
-            margin-bottom: 6px;
-            letter-spacing: -.02em;
-        }
-
-        .auth-card .auth-sub {
-            color: var(--text-muted);
-            font-size: 14px;
-            margin-bottom: 32px;
-            line-height: 1.5;
-        }
-
-        .auth-card input {
-            width: 100%;
-            padding: 12px 14px;
-            border: 2px solid var(--border);
-            border-radius: 4px;
-            font-size: 15px;
-            font-family: var(--sans);
-            margin-bottom: 12px;
-            transition: border-color .15s;
-        }
-
-        .auth-card input:focus { outline: none; border-color: var(--blue); }
-
-        /* ── HEADER ── */
-        .header {
-            background: var(--navy);
-            color: white;
-            padding: 0 28px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 56px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 2px 12px rgba(0,0,0,.3);
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .header-icon {
-            font-size: 18px;
-        }
-
-        .header-title {
-            font-size: 15px;
-            font-weight: 700;
-            letter-spacing: -.01em;
-        }
-
-        .header-divider {
-            width: 1px;
-            height: 20px;
-            background: rgba(255,255,255,.2);
-        }
-
-        .header-nav {
-            display: flex;
-            gap: 2px;
-        }
-
-        .nav-btn {
-            background: none;
-            border: none;
-            color: rgba(255,255,255,.6);
-            padding: 7px 14px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 500;
-            font-family: var(--sans);
-            transition: all .15s;
-            letter-spacing: .01em;
-        }
-
-        .nav-btn:hover { background: rgba(255,255,255,.1); color: white; }
-        .nav-btn.active { background: rgba(255,255,255,.15); color: white; }
-        .nav-btn.sign-out { color: rgba(255,255,255,.4); margin-left: 8px; }
-        .nav-btn.sign-out:hover { background: rgba(220,38,38,.2); color: #fca5a5; }
-
-        /* ── MAIN ── */
-        .main {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 32px 28px;
-        }
-
-        .view { display: none; }
-        .view.active { display: block; }
-
-        /* ── PAGE HEADER ── */
-        .page-header {
-            margin-bottom: 24px;
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-        }
-
-        .page-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--navy);
-            letter-spacing: -.02em;
-        }
-
-        .page-subtitle {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin-top: 3px;
-        }
-
-        /* ── CARD ── */
-        .card {
-            background: var(--white);
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            padding: 28px;
-            margin-bottom: 20px;
-        }
-
-        .card-title {
-            font-size: 13px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        /* ── FORM ── */
-        .form-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 18px;
-        }
-
-        .form-group { display: flex; flex-direction: column; gap: 7px; }
-        .form-group.span2 { grid-column: 1 / -1; }
-
-        label {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: .06em;
-        }
-
-        input[type="text"],
-        input[type="number"],
-        input[type="date"],
-        input[type="email"],
-        select,
-        textarea {
-            padding: 10px 12px;
-            border: 2px solid var(--border);
-            border-radius: 4px;
-            font-size: 14px;
-            font-family: var(--sans);
-            color: var(--text);
-            background: var(--white);
-            transition: border-color .15s;
-        }
-
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: var(--blue);
-        }
-
-        textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
-
-        .checkbox-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 2px;
-        }
-
-        .cb-item {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            padding: 7px 12px;
-            border: 2px solid var(--border);
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all .15s;
-            font-size: 13px;
-            font-weight: 500;
-            user-select: none;
-        }
-
-        .cb-item input[type="checkbox"] {
-            padding: 0;
-            width: 15px;
-            height: 15px;
-            border: none;
-            margin: 0;
-            cursor: pointer;
-        }
-
-        .cb-item:has(input:checked) {
-            border-color: var(--brookwood);
-            background: var(--blue-light);
-            color: var(--brookwood);
-        }
-
-        /* ── BUTTONS ── */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 10px 18px;
-            border-radius: 4px;
-            border: none;
-            font-size: 13px;
-            font-weight: 600;
-            font-family: var(--sans);
-            cursor: pointer;
-            transition: all .15s;
-            letter-spacing: .01em;
-        }
-
-        .btn-primary { background: var(--navy); color: white; }
-        .btn-primary:hover { background: var(--navy-mid); }
-        .btn-success { background: var(--green); color: white; }
-        .btn-success:hover { opacity: .9; }
-        .btn-ghost { background: transparent; color: var(--text-muted); border: 2px solid var(--border); }
-        .btn-ghost:hover { border-color: var(--slate); color: var(--text); }
-        .btn-sm { padding: 6px 12px; font-size: 12px; }
-
-        /* ── BADGES ── */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 3px 9px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .05em;
-            font-family: var(--mono);
-        }
-
-        .badge-pending    { background: #fdf0d5; color: #92640e; }
-        .badge-in-repair  { background: #e8f0e4; color: #2d4d28; }
-        .badge-waiting    { background: #fdf0d5; color: #92640e; }
-        .badge-resolved   { background: #d6edd0; color: #1e4a1a; }
-        .badge-sent-out   { background: #f3ece8; color: #7a3520; }
-
-        .loaner-tag {
-            display: inline-flex;
-            align-items: center;
-            padding: 2px 8px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: 600;
-            font-family: var(--mono);
-            background: #fdf0d5;
-            color: #92640e;
-        }
-
-        /* ── TABLE ── */
-        .table-wrap { overflow-x: auto; }
-
-        table { width: 100%; border-collapse: collapse; }
-
-        thead th {
-            padding: 10px 14px;
-            text-align: left;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .07em;
-            color: var(--text-muted);
-            border-bottom: 2px solid var(--border);
-            white-space: nowrap;
-            background: var(--bg);
-        }
-
-        tbody td {
-            padding: 12px 14px;
-            font-size: 13px;
-            border-bottom: 1px solid var(--border);
-            vertical-align: middle;
-        }
-
-        tbody tr:last-child td { border-bottom: none; }
-        tbody tr:hover td { background: #f8fafc; }
-
-        .mono { font-family: var(--mono); font-size: 12px; }
-
-        /* ── FILTERS ── */
-        .filter-bar {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .filter-bar input,
-        .filter-bar select {
-            flex: 1;
-            min-width: 160px;
-            height: 38px;
-            padding: 0 12px;
-        }
-
-        /* ── STATS ── */
-        .stat-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 14px;
-            margin-bottom: 24px;
-        }
-
-        .stat-box {
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            padding: 18px 20px;
-            border-left: 4px solid var(--navy);
-        }
-
-        .stat-box.red { border-left-color: var(--red); }
-        .stat-box.green { border-left-color: var(--green); }
-        .stat-box.amber { border-left-color: var(--mango); }
-
-        .stat-num {
-            font-size: 30px;
-            font-weight: 800;
-            color: var(--navy);
-            font-family: var(--mono);
-            letter-spacing: -.02em;
-        }
-
-        .stat-lbl {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 3px;
-            font-weight: 500;
-        }
-
-        /* ── TABS ── */
-        .tab-bar {
-            display: flex;
-            gap: 0;
-            border-bottom: 2px solid var(--border);
-            margin-bottom: 24px;
-        }
-
-        .tab-btn {
-            padding: 10px 20px;
-            border: none;
-            background: none;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            font-family: var(--sans);
-            color: var(--text-muted);
-            border-bottom: 3px solid transparent;
-            margin-bottom: -2px;
-            transition: all .15s;
-            letter-spacing: .01em;
-        }
-
-        .tab-btn.active { color: var(--brookwood); border-bottom-color: var(--brookwood); }
-        .tab-btn:hover { color: var(--text); }
-
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
-
-        /* ── MODAL ── */
-        .overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(15,34,64,.6);
-            z-index: 500;
-            align-items: flex-start;
-            justify-content: center;
-            padding: 40px 16px;
-            overflow-y: auto;
-            backdrop-filter: blur(2px);
-        }
-
-        .overlay.open { display: flex; }
-
-        .modal {
-            background: var(--white);
-            border-radius: 6px;
-            padding: 32px;
-            width: 100%;
-            max-width: 680px;
-            box-shadow: 0 32px 80px rgba(0,0,0,.3);
-        }
-
-        .modal-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 24px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .modal-name {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--navy);
-            letter-spacing: -.02em;
-        }
-
-        .modal-meta { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
-
-        .modal-close {
-            background: none;
-            border: none;
-            font-size: 22px;
-            cursor: pointer;
-            color: var(--text-muted);
-            line-height: 1;
-            padding: 4px;
-        }
-
-        .modal-close:hover { color: var(--text); }
-
-        .modal-foot {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-        }
-
-        .section-head {
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            color: var(--text-muted);
-            margin-bottom: 14px;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-            margin-bottom: 20px;
-        }
-
-        .info-item label {
-            display: block;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: .06em;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-
-        .info-val {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text);
-        }
-
-        .info-item.span2 { grid-column: 1 / -1; }
-
-        hr.rule {
-            border: none;
-            border-top: 1px dashed var(--border);
-            margin: 22px 0;
-        }
-
-        /* ── ALERTS ── */
-        .alert {
-            padding: 11px 14px;
-            border-radius: 4px;
-            font-size: 13px;
-            margin-bottom: 16px;
-            font-weight: 500;
-        }
-
-        .alert-ok  { background: var(--green-light); color: #14532d; }
-        .alert-err { background: var(--red-light); color: #7f1d1d; }
-        .alert-inf { background: var(--blue-light); color: #1e3a8a; }
-
-        /* ── MISC ── */
-        .empty {
-            text-align: center;
-            padding: 48px 24px;
-            color: var(--text-muted);
-            font-size: 14px;
-        }
-
-        .empty-icon { font-size: 32px; margin-bottom: 10px; }
-
-        .hidden { display: none !important; }
-
-        .days-out { font-family: var(--mono); font-size: 13px; font-weight: 700; }
-        .days-warn { color: var(--red); }
-
-        @media (max-width: 640px) {
-            .form-grid { grid-template-columns: 1fr; }
-            .info-grid { grid-template-columns: 1fr; }
-            .header-nav { gap: 0; }
-            .nav-btn { padding: 7px 10px; font-size: 12px; }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chromebook Carts — Brookwood School</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F5F4EF;
+      --header-bg: #123731;
+      --header-text: #E8EDE9;
+      --reserved-text: #7A4010;
+      --reserved-bg: #FDF0E6;
+      --reserved-border: #E8A97A;
+      --surface: #FFFFFF;
+      --text: #1C1C1C;
+      --text-muted: #6B7280;
+      --border: #E2E0D8;
+      --sans: 'DM Sans', sans-serif;
+      --display: 'Playfair Display', serif;
+      --mono: 'DM Mono', monospace;
+      /* grade theme tokens — swapped per body class */
+      --gt-tab:          #4E6D41;
+      --gt-h1:           #4E6D41;
+      --gt-h2:           #5E8050;
+      --gt-avail-text:   #3A5530;
+      --gt-avail-bg:     #EEF6E9;
+      --gt-avail-border: #9DC88D;
+      --gt-avail-hover:  #C8E4BF;
+      --gt-btn:          #4E6D41;
+      --gt-btn-hov:      #3A5330;
+    }
+    body.grade-5th {
+      --gt-tab:          #4E6D41;
+      --gt-h1:           #4E6D41;
+      --gt-h2:           #5E8050;
+      --gt-avail-text:   #3A5530;
+      --gt-avail-bg:     #EEF6E9;
+      --gt-avail-border: #9DC88D;
+      --gt-avail-hover:  #C8E4BF;
+      --gt-btn:          #4E6D41;
+      --gt-btn-hov:      #3A5330;
+    }
+    body.grade-6th {
+      --gt-tab:          #C4901A;
+      --gt-h1:           #C4901A;
+      --gt-h2:           #D4A020;
+      --gt-avail-text:   #7A5800;
+      --gt-avail-bg:     #FEF9EC;
+      --gt-avail-border: #F1B24A;
+      --gt-avail-hover:  #FAE3A0;
+      --gt-btn:          #C4901A;
+      --gt-btn-hov:      #A07010;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); font-family: var(--sans); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      background: var(--header-bg); color: var(--header-text);
+      padding: 18px 32px; display: flex; align-items: center;
+      justify-content: space-between; gap: 16px;
+    }
+    .school-name { font-family: var(--display); font-size: 0.95rem; opacity: 0.65; }
+    .page-title  { font-family: var(--display); font-size: 1.5rem; font-weight: 600; margin-top: 2px; }
+    .week-nav    { display: flex; align-items: center; gap: 10px; }
+    .week-label  { font-family: var(--mono); font-size: 0.82rem; opacity: 0.85; min-width: 170px; text-align: center; }
+    .nav-btn {
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      color: var(--header-text); width: 30px; height: 30px; border-radius: 5px;
+      cursor: pointer; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+      transition: background .15s;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.2); }
+    .today-btn {
+      font-family: var(--mono); font-size: 0.72rem; padding: 5px 11px;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      color: var(--header-text); border-radius: 5px; cursor: pointer; transition: background .15s;
+    }
+    .today-btn:hover { background: rgba(255,255,255,0.2); }
+
+    main { max-width: 1200px; margin: 0 auto; padding: 28px 24px; }
+
+    /* ── Grade tabs ── */
+    .grade-tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid var(--border); }
+    .grade-tab {
+      font-family: var(--sans); font-size: 0.9rem; font-weight: 500;
+      padding: 10px 24px; border: none; background: none; color: var(--text-muted);
+      cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .15s;
+    }
+    .grade-tab:hover  { color: var(--gt-tab); }
+    .grade-tab.active { color: var(--gt-tab); border-bottom-color: var(--gt-tab); font-weight: 600; }
+
+    /* ── Error banner ── */
+    .err-banner {
+      background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 8px;
+      padding: 12px 16px; margin-bottom: 16px; font-size: 0.84rem; color: #991B1B; display: none;
+    }
+
+    /* ═══════════════════════════════════════════
+       DESKTOP TABLE (hidden on mobile)
+    ═══════════════════════════════════════════ */
+    .table-wrapper {
+      background: var(--surface); border-radius: 10px; border: 1px solid var(--border);
+      overflow: auto; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    table { width: 100%; border-collapse: collapse; min-width: 700px; }
+
+    thead tr:first-child th { background: var(--gt-h1); }
+    thead tr:last-child  th { background: var(--gt-h2); }
+
+    th {
+      color: rgba(255,255,255,0.92); font-size: 0.72rem; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase; padding: 9px 6px;
+      text-align: center; white-space: nowrap;
+    }
+    th.period-header { text-align: left; padding-left: 14px; width: 108px; }
+    th.day-header    { border-left: 1px solid rgba(255,255,255,0.15); }
+    th.today-header  { color: #A8F0C6; }
+    .day-date        { display: block; font-size: 0.65rem; font-weight: 400; opacity: 0.75; font-family: var(--mono); margin-top: 1px; }
+    th.cart-header   { font-size: 0.68rem; border-left: 1px solid rgba(255,255,255,0.1); }
+    th.cart-header.day-start { border-left: 1px solid rgba(255,255,255,0.25); }
+
+    tbody tr         { border-top: 1px solid var(--border); }
+    tbody tr:hover   { background: #FAFAF8; }
+
+    td.period-cell {
+      padding: 8px 8px 8px 14px; border-right: 1px solid var(--border);
+      vertical-align: middle; white-space: nowrap;
+    }
+    .period-name { font-size: 0.76rem; font-weight: 500; }
+    .period-time { font-family: var(--mono); font-size: 0.65rem; color: var(--text-muted); margin-top: 1px; }
+
+    td.slot-cell {
+      padding: 4px; text-align: center; vertical-align: middle;
+      min-width: 82px; height: 52px; border-left: 1px solid var(--border); transition: background .1s;
+    }
+    td.slot-cell.day-start { border-left: 2px solid var(--border); }
+    td.slot-cell.past      { background: #FAFAF8; }
+
+    /* ── Chips (shared desktop + mobile) ── */
+    .chip {
+      display: inline-block; width: calc(100% - 4px); border-radius: 5px;
+      padding: 5px; font-size: 0.69rem; font-weight: 500;
+      text-align: center; line-height: 1.3; transition: all .1s;
+    }
+    .chip-available {
+      color: var(--gt-avail-text); background: var(--gt-avail-bg);
+      border: 1px solid var(--gt-avail-border); cursor: pointer;
+    }
+    td.slot-cell:not(.past):hover .chip-available,
+    .m-slot:hover .chip-available {
+      background: var(--gt-avail-hover); border-color: var(--gt-tab);
+    }
+    .chip-reserved {
+      color: var(--reserved-text); background: var(--reserved-bg);
+      border: 1px solid var(--reserved-border); cursor: pointer;
+    }
+    td.slot-cell:not(.past):hover .chip-reserved,
+    .m-slot:hover .chip-reserved { background: #FAE0C5; }
+    .chip-past { color: #B8B4AC; background: #F4F3F0; border: 1px solid #E6E4DF; font-style: italic; font-size: 0.65rem; }
+
+    /* ═══════════════════════════════════════════
+       MOBILE (day-picker + single-day grid)
+    ═══════════════════════════════════════════ */
+    .day-picker {
+      display: none; gap: 6px; margin-bottom: 12px;
+      overflow-x: auto; padding-bottom: 4px;
+    }
+    .day-btn {
+      flex-shrink: 0; font-family: var(--sans); font-size: 0.78rem; font-weight: 500;
+      padding: 8px 0; border-radius: 8px; border: 1.5px solid var(--border);
+      background: white; color: var(--text-muted); cursor: pointer; transition: all .15s;
+      text-align: center; width: 58px;
+    }
+    .day-btn .ds { display: block; font-weight: 600; color: var(--text); font-size: 0.82rem; }
+    .day-btn .dn { display: block; font-size: 0.64rem; margin-top: 2px; font-family: var(--mono); }
+    .day-btn.today-day  { border-color: var(--gt-tab); }
+    .day-btn.active     { background: var(--gt-tab); border-color: var(--gt-tab); color: white; }
+    .day-btn.active .ds { color: white; }
+
+    .mobile-table-wrap {
+      display: none;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .m-header {
+      display: grid; grid-template-columns: 84px 1fr 1fr;
+      background: var(--gt-h1);
+    }
+    .m-header-cell {
+      color: rgba(255,255,255,0.92); font-size: 0.72rem; font-weight: 600;
+      letter-spacing: 0.05em; text-transform: uppercase; padding: 10px 6px; text-align: center;
+    }
+    .m-header-cell:first-child { text-align: left; padding-left: 14px; }
+    .m-row {
+      display: grid; grid-template-columns: 84px 1fr 1fr;
+      border-top: 1px solid var(--border);
+    }
+    .m-period {
+      padding: 8px 4px 8px 14px; border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .m-slot {
+      padding: 5px 4px; display: flex; align-items: center; justify-content: center;
+      border-left: 1px solid var(--border); min-height: 54px;
+    }
+    .m-slot .chip { font-size: 0.72rem; width: calc(100% - 4px); }
+
+    /* ── Breakpoints ── */
+    @media (max-width: 720px) {
+      header  { flex-direction: column; align-items: flex-start; padding: 14px 16px; gap: 10px; }
+      .week-nav { width: 100%; justify-content: space-between; }
+      .week-label { min-width: 0; flex: 1; text-align: center; }
+      main    { padding: 14px 10px; }
+      .table-wrapper     { display: none; }
+      .day-picker        { display: flex; }
+      .mobile-table-wrap { display: block; }
+    }
+
+    /* ── Modals ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; padding: 20px;
+      opacity: 0; pointer-events: none; transition: opacity .2s;
+    }
+    .modal-overlay.active { opacity: 1; pointer-events: all; }
+    .modal {
+      background: white; border-radius: 12px; padding: 28px; max-width: 380px; width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+      transform: translateY(10px); transition: transform .2s;
+    }
+    .modal-overlay.active .modal { transform: translateY(0); }
+    .modal-eyebrow {
+      font-family: var(--mono); font-size: 0.68rem; color: var(--gt-tab);
+      font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 4px;
+    }
+    .modal-title { font-family: var(--display); font-size: 1.25rem; font-weight: 600; }
+    .modal-sub   { font-family: var(--mono); font-size: 0.74rem; color: var(--text-muted); margin: 4px 0 20px; }
+    .modal-input {
+      width: 100%; padding: 10px 13px; border: 1.5px solid var(--border); border-radius: 7px;
+      font-family: var(--sans); font-size: 0.9rem; color: var(--text); background: var(--bg);
+      outline: none; transition: border-color .15s; margin-bottom: 14px;
+    }
+    .modal-input:focus { border-color: var(--gt-tab); background: white; }
+    .modal-actions { display: flex; gap: 8px; }
+    .btn {
+      flex: 1; padding: 10px 14px; border-radius: 7px; font-family: var(--sans);
+      font-size: 0.87rem; font-weight: 500; cursor: pointer; border: none; transition: all .15s;
+    }
+    .btn-secondary { background: var(--bg); color: var(--text-muted); border: 1.5px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-primary   { background: var(--gt-btn); color: white; }
+    .btn-primary:hover { background: var(--gt-btn-hov); }
+    .btn-primary:disabled, .btn-danger:disabled { opacity: .5; cursor: default; }
+    .btn-danger    { background: #DC2626; color: white; }
+    .btn-danger:hover { background: #B91C1C; }
+    .cancel-info {
+      background: var(--reserved-bg); border: 1px solid var(--reserved-border);
+      border-radius: 7px; padding: 11px 14px; margin-bottom: 16px; font-size: 0.85rem;
+    }
+    .cancel-name { font-weight: 600; color: #B45309; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 22px; right: 22px; padding: 11px 18px;
+      border-radius: 8px; font-size: 0.84rem; font-weight: 500; z-index: 200;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      opacity: 0; transform: translateY(8px); transition: all .2s; pointer-events: none;
+      background: var(--gt-btn); color: white;
+    }
+    .toast.show  { opacity: 1; transform: translateY(0); }
+    .toast.error { background: #DC2626; }
+  </style>
 </head>
-<body>
+<body class="grade-5th">
 
-<!-- ── AUTH ── -->
-<div id="auth-screen" class="auth-screen">
-    <div class="auth-card">
-        <div class="auth-logo">
-            <img src="./webapp_logo.svg" alt="Brookwood" style="width:40px; height:40px; object-fit:contain;" />
-        </div>
-        <h1>Device Repair Tracker</h1>
-        <p class="auth-sub">Brookwood School Technology Department.<br>Sign in with your Brookwood email to continue.</p>
-        <div id="auth-alert"></div>
-        <input type="email" id="auth-email" placeholder="you@brookwood.edu" />
-        <button class="btn btn-primary" style="width:100%; justify-content:center; padding:13px;" onclick="signIn()">Send Magic Link</button>
+<header>
+  <div>
+    <div class="school-name">Brookwood School</div>
+    <div class="page-title">Chromebook Carts</div>
+  </div>
+  <div class="week-nav">
+    <button class="nav-btn" id="prevWeek">&#8249;</button>
+    <span class="week-label" id="weekLabel">&#8212;</span>
+    <button class="nav-btn" id="nextWeek">&#8250;</button>
+    <button class="today-btn" id="todayBtn">This Week</button>
+  </div>
+</header>
+
+<main>
+  <div class="grade-tabs" id="gradeTabs"></div>
+  <div class="err-banner" id="errBanner"></div>
+
+  <!-- Mobile day picker -->
+  <div class="day-picker" id="dayPicker"></div>
+  <div class="mobile-table-wrap">
+    <div class="m-header" id="mHeader"></div>
+    <div id="mBody"></div>
+  </div>
+
+  <!-- Desktop table -->
+  <div class="table-wrapper">
+    <table>
+      <thead id="tableHead"></thead>
+      <tbody id="tableBody">
+        <tr><td colspan="11" style="text-align:center;padding:50px;color:var(--text-muted);font-family:var(--mono);font-size:.82rem">Loading&hellip;</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Reserve modal -->
+<div class="modal-overlay" id="reserveModal">
+  <div class="modal">
+    <div class="modal-eyebrow" id="rEyebrow"></div>
+    <div class="modal-title"   id="rTitle"></div>
+    <div class="modal-sub"     id="rSub"></div>
+    <input class="modal-input" id="nameInput" type="text" placeholder="Your name" autocomplete="off" maxlength="80">
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="rCancelBtn">Cancel</button>
+      <button class="btn btn-primary"   id="rConfirmBtn">Reserve</button>
     </div>
+  </div>
 </div>
 
-<!-- ── APP ── -->
-<div id="app" class="hidden">
-
-    <div class="header">
-        <div class="header-left">
-            <img src="./webapp_logo.svg" alt="Brookwood" style="height:32px; object-fit:contain;" />
-            <div class="header-divider"></div>
-            <span class="header-title">Device Repair Tracker</span>
-        </div>
-        <div class="header-nav">
-            <button class="nav-btn active" data-view="new">New Incident</button>
-            <button class="nav-btn" data-view="open">Open Cases</button>
-            <button class="nav-btn" data-view="all">All Incidents</button>
-            <button class="nav-btn" data-view="loans">Loans</button>
-            <button class="nav-btn" data-view="reports">Reports</button>
-            <button class="nav-btn sign-out" onclick="signOut()">Sign Out</button>
-        </div>
+<!-- Cancel modal -->
+<div class="modal-overlay" id="cancelModal">
+  <div class="modal">
+    <div class="modal-eyebrow" id="cEyebrow"></div>
+    <div class="modal-title"   id="cTitle"></div>
+    <div class="modal-sub"     id="cSub"></div>
+    <div class="cancel-info">Reserved by <span class="cancel-name" id="cName"></span></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="cKeepBtn">Keep it</button>
+      <button class="btn btn-danger"    id="cCancelBtn">Cancel reservation</button>
     </div>
-
-    <div class="main">
-
-        <!-- NEW INCIDENT -->
-        <div id="view-new" class="view active">
-            <div class="page-header">
-                <div>
-                    <div class="page-title">Log New Incident</div>
-                    <div class="page-subtitle">Record a new device issue</div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-title">Student & Device</div>
-                <div id="new-alert"></div>
-
-                <div class="form-group span2" style="margin-bottom:18px;">
-                    <label>Device Source *</label>
-                    <div class="checkbox-row" style="margin-top:4px;">
-                        <label class="cb-item"><input type="radio" name="ni-source" value="student" checked onchange="toggleSource()" style="width:15px;height:15px;padding:0;margin:0;" /><span>Student Device</span></label>
-                        <label class="cb-item"><input type="radio" name="ni-source" value="cart" onchange="toggleSource()" style="width:15px;height:15px;padding:0;margin:0;" /><span>Class Cart</span></label>
-                    </div>
-                </div>
-
-                <div id="student-fields" class="form-grid" style="margin-bottom:0;">
-                    <div class="form-group">
-                        <label>First Name *</label>
-                        <input type="text" id="ni-firstname" placeholder="First name" />
-                    </div>
-                    <div class="form-group">
-                        <label>Last Initial *</label>
-                        <input type="text" id="ni-lastinitial" placeholder="e.g. S" maxlength="1" style="text-transform:uppercase;" />
-                    </div>
-                </div>
-
-                <div id="cart-fields" style="display:none; margin-bottom:0;">
-                    <div class="form-group">
-                        <label>Cart *</label>
-                        <select id="ni-cart">
-                            <option value="">Select cart...</option>
-                            <option value="Cart: 4th Grade">4th Grade</option>
-                            <option value="Cart: 5-1">5-1</option>
-                            <option value="Cart: 5-2">5-2</option>
-                            <option value="Cart: 6-1">6-1</option>
-                            <option value="Cart: 6-2">6-2</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-grid" style="margin-top:18px;">
-                    <div class="form-group">
-                        <label>Grade</label>
-                        <select id="ni-grade">
-                            <option value="">Select grade...</option>
-                            <option value="5">5th Grade</option>
-                            <option value="6">6th Grade</option>
-                            <option value="7">7th Grade</option>
-                            <option value="8">8th Grade</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Device ID / Asset Tag</label>
-                        <input type="text" id="ni-device-id" placeholder="e.g. BW-CB-042" />
-                    </div>
-                    <div class="form-group">
-                        <label>Device Serial Number *</label>
-                        <input type="text" id="ni-sn" placeholder="Serial number" />
-                    </div>
-                    <div class="form-group span2">
-                        <label>Damage Scope *</label>
-                        <div class="checkbox-row">
-                            <label class="cb-item"><input type="checkbox" class="dmg" value="Screen" /><span>Screen</span></label>
-                            <label class="cb-item"><input type="checkbox" class="dmg" value="Broken Plastic" /><span>Broken Plastic</span></label>
-                            <label class="cb-item"><input type="checkbox" class="dmg" value="Broken Key(s)" /><span>Broken Key(s)</span></label>
-                            <label class="cb-item"><input type="checkbox" class="dmg" value="Battery" /><span>Battery</span></label>
-                            <label class="cb-item"><input type="checkbox" class="dmg" value="Charging Port" /><span>Charging Port</span></label>
-                            <label class="cb-item"><input type="checkbox" class="dmg" value="Hinge" /><span>Hinge</span></label>
-                            <label class="cb-item"><input type="checkbox" class="dmg" value="Other" /><span>Other</span></label>
-                        </div>
-                    </div>
-                    <div class="form-group span2">
-                        <label>Damage Description</label>
-                        <textarea id="ni-desc" placeholder="Describe the damage in detail..."></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Loaner Provided</label>
-                        <label class="cb-item" style="width:fit-content; margin-top:2px;">
-                            <input type="checkbox" id="ni-loaner" onchange="toggleLoanerField()" />
-                            <span>Yes, loaner was issued</span>
-                        </label>
-                    </div>
-                    <div class="form-group" id="loaner-field" style="display:none;">
-                        <label>Loaner Device</label>
-                        <select id="ni-loaner-sn">
-                            <option value="">Loading available devices...</option>
-                        </select>
-                    </div>
-                    <div class="form-group span2">
-                        <label>Initial Notes</label>
-                        <textarea id="ni-notes" placeholder="Anything else worth noting at intake..."></textarea>
-                    </div>
-                </div>
-                <div style="margin-top:22px; display:flex; gap:10px;">
-                    <button class="btn btn-primary" onclick="submitIncident()">Log Incident</button>
-                    <button class="btn btn-ghost" onclick="clearNewForm()">Clear</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- OPEN CASES -->
-        <div id="view-open" class="view">
-            <div class="page-header">
-                <div>
-                    <div class="page-title">Open Cases</div>
-                    <div class="page-subtitle">Everything not yet resolved</div>
-                </div>
-                <button class="btn btn-ghost btn-sm" onclick="loadOpen()">↻ Refresh</button>
-            </div>
-            <div class="card" style="padding:0; overflow:hidden;">
-                <div id="open-content"><div class="empty"><div class="empty-icon">⏳</div>Loading...</div></div>
-            </div>
-        </div>
-
-        <!-- ALL INCIDENTS -->
-        <div id="view-all" class="view">
-            <div class="page-header">
-                <div>
-                    <div class="page-title">All Incidents</div>
-                    <div class="page-subtitle">Complete history</div>
-                </div>
-                <button class="btn btn-ghost btn-sm" onclick="loadAll()">↻ Refresh</button>
-            </div>
-            <div class="card" style="padding:20px 20px 0;">
-                <div class="filter-bar">
-                    <input type="text" id="f-search" placeholder="Search student name..." oninput="renderFiltered()" />
-                    <select id="f-status" onchange="renderFiltered()">
-                        <option value="">All Statuses</option>
-                        <option value="Pending">Pending</option>
-                        <option value="In Repair">In Repair</option>
-                        <option value="Waiting on Parts">Waiting on Parts</option>
-                        <option value="Sent Out">Sent Out</option>
-                        <option value="Resolved">Resolved</option>
-                    </select>
-                    <select id="f-grade" onchange="renderFiltered()">
-                        <option value="">All Grades</option>
-                        <option value="5">5th Grade</option>
-                        <option value="6">6th Grade</option>
-                        <option value="7">7th Grade</option>
-                        <option value="8">8th Grade</option>
-                    </select>
-                </div>
-            </div>
-            <div class="card" style="padding:0; overflow:hidden;">
-                <div id="all-content"><div class="empty"><div class="empty-icon">📋</div>Loading...</div></div>
-            </div>
-        </div>
-
-        <!-- REPORTS -->
-        <div id="view-reports" class="view">
-            <div class="page-header">
-                <div>
-                    <div class="page-title">Reports</div>
-                    <div class="page-subtitle">Analytics and summaries</div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="tab-bar">
-                    <button class="tab-btn active" onclick="switchTab('loaners', this)">Loaners Out</button>
-                    <button class="tab-btn" onclick="switchTab('student', this)">Student History</button>
-                    <button class="tab-btn" onclick="switchTab('costs', this)">Cost Summary</button>
-                    <button class="tab-btn" onclick="switchTab('repeat', this)">Repeat Incidents</button>
-                </div>
-
-                <div id="tab-loaners" class="tab-panel active">
-                    <div id="r-loaners"><div class="empty"><div class="empty-icon">📡</div>Loading...</div></div>
-                </div>
-
-                <div id="tab-student" class="tab-panel">
-                    <div class="filter-bar" style="margin-bottom:20px;">
-                        <input type="text" id="r-student-q" placeholder="Enter student name..." onkeydown="if(event.key==='Enter') searchStudent()" />
-                        <button class="btn btn-primary" onclick="searchStudent()">Search</button>
-                    </div>
-                    <div id="r-student"></div>
-                </div>
-
-                <div id="tab-costs" class="tab-panel">
-                    <div id="r-costs"><div class="empty"><div class="empty-icon">💰</div>Loading...</div></div>
-                </div>
-
-                <div id="tab-repeat" class="tab-panel">
-                    <div id="r-repeat"><div class="empty"><div class="empty-icon">🔄</div>Loading...</div></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- LOANS -->
-        <div id="view-loans" class="view">
-            <div class="page-header">
-                <div>
-                    <div class="page-title">Loaner Loans</div>
-                    <div class="page-subtitle">Track standalone loaner checkouts — no repair required</div>
-                </div>
-                <button class="btn btn-ghost btn-sm" onclick="loadLoans()">↻ Refresh</button>
-            </div>
-
-            <!-- Pool status bar -->
-            <div id="loan-pool-bar" style="margin-bottom:20px;"></div>
-
-            <!-- Tab bar -->
-            <div class="card">
-                <div class="tab-bar">
-                    <button class="tab-btn active" onclick="switchLoanTab('new', this)">Issue Loan</button>
-                    <button class="tab-btn" onclick="switchLoanTab('active', this)">Active Loans</button>
-                    <button class="tab-btn" onclick="switchLoanTab('history', this)">History</button>
-                </div>
-
-                <!-- Issue loan form -->
-                <div id="ltab-new" class="tab-panel active">
-                    <div id="loan-alert"></div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label>First Name *</label>
-                            <input type="text" id="ln-firstname" placeholder="First name" />
-                        </div>
-                        <div class="form-group">
-                            <label>Last Initial *</label>
-                            <input type="text" id="ln-lastinitial" placeholder="e.g. S" maxlength="1" style="text-transform:uppercase;" />
-                        </div>
-                        <div class="form-group">
-                            <label>Grade</label>
-                            <select id="ln-grade">
-                                <option value="">Select grade...</option>
-                                <option value="5">5th Grade</option>
-                                <option value="6">6th Grade</option>
-                                <option value="7">7th Grade</option>
-                                <option value="8">8th Grade</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Reason *</label>
-                            <select id="ln-reason">
-                                <option value="">Select reason...</option>
-                                <option value="Misplaced">Misplaced / Can't find device</option>
-                                <option value="Dead Battery">Dead battery</option>
-                                <option value="Forgotten">Left at home</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div class="form-group span2">
-                            <label>Loaner Device *</label>
-                            <select id="ln-device">
-                                <option value="">Loading available devices...</option>
-                            </select>
-                        </div>
-                        <div class="form-group span2">
-                            <label>Notes</label>
-                            <textarea id="ln-notes" placeholder="Anything worth noting..." style="height:70px;"></textarea>
-                        </div>
-                    </div>
-                    <div style="margin-top:18px; display:flex; gap:10px;">
-                        <button class="btn btn-primary" onclick="submitLoan()">Issue Loan</button>
-                        <button class="btn btn-ghost" onclick="clearLoanForm()">Clear</button>
-                    </div>
-                </div>
-
-                <!-- Active loans -->
-                <div id="ltab-active" class="tab-panel">
-                    <div id="loan-active-list"><div class="empty"><div class="empty-icon">⏳</div>Loading...</div></div>
-                </div>
-
-                <!-- History -->
-                <div id="ltab-history" class="tab-panel">
-                    <div id="loan-history-list"><div class="empty"><div class="empty-icon">⏳</div>Loading...</div></div>
-                </div>
-            </div>
-        </div>
-
-    </div>
+  </div>
 </div>
 
-<!-- ── MODAL ── -->
-<div id="modal-overlay" class="overlay" onclick="if(event.target===this) closeModal()">
-    <div class="modal">
-        <div class="modal-head">
-            <div>
-                <div class="modal-name" id="m-name"></div>
-                <div class="modal-meta" id="m-meta"></div>
-            </div>
-            <button class="modal-close" onclick="closeModal()">×</button>
-        </div>
-
-        <div id="m-alert"></div>
-
-        <div class="section-head">Intake Record</div>
-        <div class="info-grid">
-            <div class="info-item"><label>Student</label><div class="info-val" id="m-student"></div></div>
-            <div class="info-item"><label>Grade</label><div class="info-val" id="m-grade"></div></div>
-            <div class="info-item"><label>Device ID</label><div class="info-val" id="m-device-id"></div></div>
-            <div class="info-item"><label>Serial Number</label><div class="info-val mono" id="m-sn"></div></div>
-            <div class="info-item span2"><label>Damage</label><div class="info-val" id="m-damage"></div></div>
-            <div class="info-item span2"><label>Loaner Status</label><div class="info-val" id="m-loaner"></div></div>
-        </div>
-
-        <hr class="rule" />
-        <div class="section-head">Resolution</div>
-
-        <div class="form-grid">
-            <div class="form-group">
-                <label>Status</label>
-                <select id="m-status">
-                    <option value="Pending">Pending</option>
-                    <option value="In Repair">In Repair</option>
-                    <option value="Waiting on Parts">Waiting on Parts</option>
-                    <option value="Sent Out">Sent Out</option>
-                    <option value="Resolved">Resolved</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Repair Cost ($)</label>
-                <input type="number" id="m-cost" placeholder="0.00" step="0.01" min="0" />
-            </div>
-            <div class="form-group span2">
-                <label>Diagnosis</label>
-                <textarea id="m-diagnosis" placeholder="What was found upon inspection..."></textarea>
-            </div>
-            <div class="form-group span2">
-                <label>Repair Action Taken</label>
-                <textarea id="m-repair" placeholder="What was done to fix it..."></textarea>
-            </div>
-            <div class="form-group">
-                <label>Date Returned to Student</label>
-                <input type="date" id="m-returned" />
-            </div>
-            <div class="form-group">
-                <label>Loaner Returned</label>
-                <label class="cb-item" style="width:fit-content; margin-top:2px;">
-                    <input type="checkbox" id="m-loaner-back" />
-                    <span>Loaner has been returned</span>
-                </label>
-            </div>
-            <div class="form-group" id="m-loaner-sn-group">
-                <label>Loaner Device S/N</label>
-                <select id="m-loaner-sn-sel">
-                    <option value="">Loading...</option>
-                </select>
-            </div>
-            <div class="form-group span2">
-                <label>Notes</label>
-                <textarea id="m-notes" placeholder="Additional notes..."></textarea>
-            </div>
-        </div>
-
-        <div class="modal-foot">
-            <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-            <button class="btn btn-primary" onclick="saveIncident()">Save Changes</button>
-        </div>
-    </div>
-</div>
+<div class="toast" id="toast"></div>
 
 <script>
-const SUPA_URL = 'https://jbrdnvtfuwdenmjdpguj.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpicmRudnRmdXdkZW5tamRwZ3VqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NTg3NTUsImV4cCI6MjA4ODQzNDc1NX0.JEiOyLOvL18UTZ4vNebaJ9UMnvBNgLWQeEB8WlwOlks';
+// ── Config ────────────────────────────────────────────────
+var SUPABASE_URL = 'https://wouagdrnrcycqoxzgdnk.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndvdWFnZHJucmN5Y3FveHpnZG5rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1NTI5NTcsImV4cCI6MjA4ODEyODk1N30.cVdi4s5HcwzNmuYfB15jA8JdJfyvQBX5JYfcKbs9Mjk';
 
-const { createClient } = supabase;
-const sb = createClient(SUPA_URL, SUPA_KEY);
+var GROUPS = [
+  { id: '5th', label: '5th Grade', carts: ['5-1', '5-2'] },
+  { id: '6th', label: '6th Grade', carts: ['6-1', '6-2'] },
+];
 
-let currentId = null;
-let allCache = [];
+var PERIODS = [
+  { id: 'p1', label: 'Period 1', time: '8:30\u20139:20'   },
+  { id: 'p2', label: 'Period 2', time: '9:20\u201310:10'  },
+  { id: 'p3', label: 'Period 3', time: '10:30\u201311:20' },
+  { id: 'p4', label: 'Period 4', time: '11:20\u201312:10' },
+  { id: 'p5', label: 'Period 5', time: '12:50\u20131:40'  },
+  { id: 'p6', label: 'Period 6', time: '1:40\u20132:30'   },
+];
 
-// ─── AUTH ───────────────────────────────────────────────────────────────────
+var DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+var DAY_SHORT = ['Mon','Tue','Wed','Thu','Fri'];
 
-async function init() {
-    const { data: { session } } = await sb.auth.getSession();
-    if (session) showApp();
+// ── State ─────────────────────────────────────────────────
+var db           = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+var activeGroup  = GROUPS[0];
+var weekOffset   = 0;
+var reservations = {};
+var pending      = null;
+var activeDayIdx = 0;
 
-    sb.auth.onAuthStateChange((event, session) => {
-        if (session) showApp();
-        else showAuth();
+// ── Helpers ───────────────────────────────────────────────
+function getMondayOf(offset) {
+  var d = new Date(); d.setHours(0,0,0,0);
+  var day = d.getDay();
+  d.setDate(d.getDate() + (day === 0 ? -6 : 1 - day) + offset * 7);
+  return d;
+}
+function weekDates(offset) {
+  var mon = getMondayOf(offset);
+  return Array.from({length:5}, function(_,i){ var d=new Date(mon); d.setDate(d.getDate()+i); return d; });
+}
+function fmtDate(d)  { return d.toISOString().split('T')[0]; }
+function fmtShort(d) { return d.toLocaleDateString('en-US',{month:'short',day:'numeric'}); }
+function isToday(d)  {
+  var t=new Date();
+  return d.getFullYear()===t.getFullYear() && d.getMonth()===t.getMonth() && d.getDate()===t.getDate();
+}
+function isPast(d, pIdx) {
+  var now=new Date(), t=new Date(); t.setHours(0,0,0,0);
+  if (d.getTime() < t.getTime()) return true;
+  if (isToday(d)) {
+    var parts = PERIODS[pIdx].time.split('\u2013');
+    if (parts[1]) {
+      var hm = parts[1].trim().split(':').map(Number);
+      var pe = new Date(); pe.setHours(hm[0], hm[1], 0, 0);
+      if (now > pe) return true;
+    }
+  }
+  return false;
+}
+// Build key from cart + date + pid (cart names have hyphens, not underscores, so split is safe)
+function mkKey(cart, date, pid) { return cart + '||' + date + '||' + pid; }
+function parseKey(key) { var p=key.split('||'); return {cart:p[0],date:p[1],pid:p[2]}; }
+
+// ── Grade tabs ────────────────────────────────────────────
+function renderTabs() {
+  var el = document.getElementById('gradeTabs');
+  el.innerHTML = GROUPS.map(function(g){
+    return '<button class="grade-tab'+(g.id===activeGroup.id?' active':'')+'" data-gid="'+g.id+'">'+g.label+'</button>';
+  }).join('');
+  el.querySelectorAll('.grade-tab').forEach(function(b){
+    b.addEventListener('click', function(){
+      activeGroup = GROUPS.find(function(g){ return g.id===b.dataset.gid; });
+      document.body.className = 'grade-' + activeGroup.id;
+      renderTabs();
+      loadAndRender();
     });
+  });
 }
 
-async function signIn() {
-    const email = document.getElementById('auth-email').value.trim();
-    const el = document.getElementById('auth-alert');
+// ── Load from Supabase ────────────────────────────────────
+async function loadAndRender() {
+  var dates    = weekDates(weekOffset);
+  var dateStrs = dates.map(fmtDate);
 
-    if (!email) { el.innerHTML = alert_html('err', 'Please enter your email address.'); return; }
-    if (!email.endsWith('@brookwood.edu')) { el.innerHTML = alert_html('err', 'Only @brookwood.edu addresses are permitted.'); return; }
+  document.getElementById('weekLabel').textContent =
+    fmtShort(dates[0]) + ' \u2013 ' + fmtShort(dates[4]) + ', ' + dates[0].getFullYear();
 
-    const { error } = await sb.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: 'https://dsaunders-sketch.github.io/device_repair/' }
-    });
+  // Loading state
+  document.getElementById('tableBody').innerHTML =
+    '<tr><td colspan="11" style="text-align:center;padding:50px;color:var(--text-muted);font-family:var(--mono);font-size:.82rem">Loading\u2026</td></tr>';
+  document.getElementById('errBanner').style.display = 'none';
 
-    if (error) { el.innerHTML = alert_html('err', error.message); }
-    else { el.innerHTML = alert_html('ok', 'Magic link sent! Check your email and click the link to sign in.'); }
-}
+  reservations = {};
+  try {
+    var res = await db
+      .from('cart_reservations')
+      .select('id,cart_name,reservation_date,period_id,reserved_by')
+      .in('cart_name', activeGroup.carts)
+      .in('reservation_date', dateStrs);
 
-async function signOut() {
-    await sb.auth.signOut();
-}
-
-function showApp() {
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
-    loadOpen();
-}
-
-function showAuth() {
-    document.getElementById('auth-screen').classList.remove('hidden');
-    document.getElementById('app').classList.add('hidden');
-}
-
-// ─── NAV ────────────────────────────────────────────────────────────────────
-
-function showView(name) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.querySelectorAll('.nav-btn[data-view]').forEach(b => b.classList.remove('active'));
-    document.getElementById('view-' + name).classList.add('active');
-    document.querySelector(`.nav-btn[data-view="${name}"]`).classList.add('active');
-
-    if (name === 'open') loadOpen();
-    if (name === 'all') loadAll();
-    if (name === 'reports') loadReports();
-    if (name === 'loans') loadLoans();
-}
-
-document.querySelectorAll('.nav-btn[data-view]').forEach(btn => {
-    btn.addEventListener('click', () => showView(btn.dataset.view));
-});
-
-// ─── NEW INCIDENT ────────────────────────────────────────────────────────────
-
-function toggleSource() {
-    const isCart = document.querySelector('input[name="ni-source"]:checked').value === 'cart';
-    document.getElementById('student-fields').style.display = isCart ? 'none' : 'grid';
-    document.getElementById('cart-fields').style.display = isCart ? 'block' : 'none';
-    document.getElementById('ni-grade').closest('.form-group').style.display = isCart ? 'none' : '';
-}
-
-function toggleLoanerField() {
-    const show = document.getElementById('ni-loaner').checked;
-    document.getElementById('loaner-field').style.display = show ? 'flex' : 'none';
-    if (show) populateLoanerDropdown('ni-loaner-sn');
-}
-
-function clearNewForm() {
-    ['ni-firstname','ni-lastinitial','ni-device-id','ni-sn','ni-desc','ni-loaner-sn','ni-notes'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('ni-grade').value = '';
-    document.getElementById('ni-cart').value = '';
-    document.querySelector('input[name="ni-source"][value="student"]').checked = true;
-    document.getElementById('student-fields').style.display = 'grid';
-    document.getElementById('cart-fields').style.display = 'none';
-    document.querySelectorAll('.dmg').forEach(c => c.checked = false);
-    document.getElementById('ni-loaner').checked = false;
-    document.getElementById('loaner-field').style.display = 'none';
-    document.getElementById('new-alert').innerHTML = '';
-}
-
-async function submitIncident() {
-    const el = document.getElementById('new-alert');
-    const isCart = document.querySelector('input[name="ni-source"]:checked').value === 'cart';
-    const firstName = document.getElementById('ni-firstname').value.trim();
-    const lastInitial = document.getElementById('ni-lastinitial').value.trim().toUpperCase();
-    const cartName = document.getElementById('ni-cart').value;
-    const name = isCart ? cartName : (lastInitial ? `${firstName} ${lastInitial}.` : firstName);
-    const grade = document.getElementById('ni-grade').value;
-    const sn = document.getElementById('ni-sn').value.trim();
-    const dmg = Array.from(document.querySelectorAll('.dmg:checked')).map(c => c.value);
-
-    if (isCart && !cartName) {
-        el.innerHTML = alert_html('err', 'Please select a cart.');
-        return;
-    }
-    if (!isCart && (!firstName || !lastInitial)) {
-        el.innerHTML = alert_html('err', 'First name, last initial, grade, serial number, and at least one damage type are required.');
-        return;
-    }
-    if (!sn || !dmg.length) {
-        el.innerHTML = alert_html('err', 'Serial number and at least one damage type are required.');
-        return;
-    }
-
-    const loaner = document.getElementById('ni-loaner').checked;
-    const loanerSel = document.getElementById('ni-loaner-sn');
-    const loanerDeviceId = loaner ? loanerSel.value : null;
-    const loanerSn = loaner ? (loanerSel.options[loanerSel.selectedIndex]?.text.split(' —')[0] || null) : null;
-
-    const rec = {
-        student_name: name,
-        student_grade: grade,
-        device_id: document.getElementById('ni-device-id').value.trim() || null,
-        device_sn: sn,
-        damage_scope: dmg.join(', '),
-        damage_description: document.getElementById('ni-desc').value.trim() || null,
-        loaner_provided: loaner,
-        loaner_sn: loanerSn,
-        loaner_device_id: loanerDeviceId,
-        notes: document.getElementById('ni-notes').value.trim() || null,
-        status: 'Pending'
-    };
-
-    const { error } = await sb.from('incidents').insert(rec);
-    if (error) { el.innerHTML = alert_html('err', error.message); return; }
-
-    // Mark loaner device as unavailable in pool
-    if (loanerDeviceId) {
-        await sb.from('loaner_devices').update({ available: false }).eq('id', loanerDeviceId);
-    }
-
-    el.innerHTML = alert_html('ok', `Incident logged for ${name}.`);
-    clearNewForm();
-    setTimeout(() => el.innerHTML = '', 5000);
-}
-
-// ─── OPEN CASES ─────────────────────────────────────────────────────────────
-
-async function loadOpen() {
-    const el = document.getElementById('open-content');
-    el.innerHTML = loading();
-
-    const { data, error } = await sb.from('incidents')
-        .select('*')
-        .not('status', 'eq', 'Resolved')
-        .order('created_at', { ascending: false });
-
-    if (error) { el.innerHTML = err_html(error.message); return; }
-    if (!data?.length) { el.innerHTML = empty('✓', 'No open cases right now.'); return; }
-    el.innerHTML = render_table(data, true);
-}
-
-// ─── ALL INCIDENTS ───────────────────────────────────────────────────────────
-
-async function loadAll() {
-    const el = document.getElementById('all-content');
-    el.innerHTML = loading();
-
-    const { data, error } = await sb.from('incidents')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-    if (error) { el.innerHTML = err_html(error.message); return; }
-    allCache = data || [];
-    renderFiltered();
-}
-
-function renderFiltered() {
-    const q = document.getElementById('f-search').value.toLowerCase();
-    const st = document.getElementById('f-status').value;
-    const gr = document.getElementById('f-grade').value;
-
-    let d = allCache;
-    if (q)  d = d.filter(i => i.student_name.toLowerCase().includes(q));
-    if (st) d = d.filter(i => i.status === st);
-    if (gr) d = d.filter(i => i.student_grade === gr);
-
-    const el = document.getElementById('all-content');
-    el.innerHTML = d.length ? render_table(d, true) : empty('🔍', 'No incidents match your filters.');
-}
-
-// ─── TABLE ──────────────────────────────────────────────────────────────────
-
-function render_table(rows, editable) {
-    return `<div class="table-wrap"><table>
-        <thead><tr>
-            <th>Date</th><th>Student</th><th>Grade</th>
-            <th>Device S/N</th><th>Damage</th><th>Status</th>
-            <th>Loaner</th><th>Cost</th>${editable ? '<th></th>' : ''}
-        </tr></thead>
-        <tbody>${rows.map(i => `<tr>
-            <td class="mono">${fdate(i.created_at)}</td>
-            <td><strong>${esc(i.student_name)}</strong></td>
-            <td>${i.student_grade}th</td>
-            <td class="mono">${esc(i.device_sn)}</td>
-            <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(i.damage_scope||'—')}</td>
-            <td>${badge(i.status)}</td>
-            <td>${i.loaner_provided ? `<span class="loaner-tag">${i.loaner_sn || 'out'}</span>` : '—'}</td>
-            <td class="mono">${i.repair_cost ? '$'+parseFloat(i.repair_cost).toFixed(2) : '—'}</td>
-            ${editable ? `<td><button class="btn btn-ghost btn-sm" onclick="openModal('${i.id}')">View / Edit</button></td>` : ''}
-        </tr>`).join('')}</tbody>
-    </table></div>`;
-}
-
-// ─── MODAL ──────────────────────────────────────────────────────────────────
-
-async function openModal(id) {
-    const { data, error } = await sb.from('incidents').select('*').eq('id', id).single();
-    if (error || !data) return;
-    currentId = id;
-
-    document.getElementById('m-name').textContent = data.student_name;
-    document.getElementById('m-meta').textContent = `${data.student_grade}th Grade · Logged ${fdate(data.created_at)}`;
-    document.getElementById('m-student').textContent = data.student_name;
-    document.getElementById('m-grade').textContent = `${data.student_grade}th Grade`;
-    document.getElementById('m-device-id').textContent = data.device_id || '—';
-    document.getElementById('m-sn').textContent = data.device_sn;
-    document.getElementById('m-damage').textContent = [data.damage_scope, data.damage_description].filter(Boolean).join(' — ') || '—';
-    document.getElementById('m-loaner').textContent = data.loaner_provided
-        ? `Issued (S/N: ${data.loaner_sn || 'not recorded'}) · ${data.loaner_returned_at ? 'Returned' : 'Still out'}`
-        : 'No loaner issued';
-
-    document.getElementById('m-status').value = data.status || 'Pending';
-    document.getElementById('m-cost').value = data.repair_cost || '';
-    document.getElementById('m-diagnosis').value = data.diagnosis || '';
-    document.getElementById('m-repair').value = data.repair_action || '';
-    document.getElementById('m-returned').value = data.date_returned ? data.date_returned.split('T')[0] : '';
-    document.getElementById('m-loaner-back').checked = !!data.loaner_returned_at;
-    document.getElementById('m-notes').value = data.notes || '';
-    document.getElementById('m-alert').innerHTML = '';
-
-    // Populate loaner device dropdown — show all devices, mark unavailable ones
-    const { data: devices } = await sb.from('loaner_devices').select('*').order('serial_number');
-    const sel = document.getElementById('m-loaner-sn-sel');
-    const group = document.getElementById('m-loaner-sn-group');
-    if (data.loaner_provided) {
-        group.style.display = '';
-        sel.innerHTML = `<option value="">— No loaner / clear —</option>` +
-            (devices || []).map(d => {
-                const label = d.serial_number + (d.asset_tag ? ' — ' + d.asset_tag : '') + (d.available ? '' : ' (out)');
-                const selected = d.id === data.loaner_device_id || d.serial_number === data.loaner_sn ? 'selected' : '';
-                return `<option value="${d.id}" data-sn="${d.serial_number}" ${selected}>${label}</option>`;
-            }).join('');
+    if (res.error) {
+      document.getElementById('errBanner').textContent =
+        'Database not connected yet \u2014 run supabase-setup.sql to enable reservations. (' + res.error.message + ')';
+      document.getElementById('errBanner').style.display = 'block';
     } else {
-        group.style.display = 'none';
+      (res.data || []).forEach(function(r){
+        reservations[mkKey(r.cart_name, r.reservation_date, r.period_id)] = { id: r.id, reserved_by: r.reserved_by };
+      });
     }
+  } catch(e) {
+    document.getElementById('errBanner').textContent = 'Could not connect to database: ' + e.message;
+    document.getElementById('errBanner').style.display = 'block';
+  }
 
-    document.getElementById('modal-overlay').classList.add('open');
+  renderDesktop(dates);
+  renderDayPicker(dates);
+  renderMobile(dates);
 }
 
-function closeModal() {
-    document.getElementById('modal-overlay').classList.remove('open');
-    currentId = null;
-}
+// ── Desktop table ─────────────────────────────────────────
+function renderDesktop(dates) {
+  var carts = activeGroup.carts;
 
-async function saveIncident() {
-    const el = document.getElementById('m-alert');
-    const loanerBack = document.getElementById('m-loaner-back').checked;
-    const loanerSel = document.getElementById('m-loaner-sn-sel');
-    const loanerDeviceId = loanerSel?.value || null;
-    const loanerSn = loanerSel?.options[loanerSel.selectedIndex]?.dataset?.sn || null;
+  // Header row 1: day names
+  var r1 = '<tr><th class="period-header" rowspan="2">Period</th>';
+  dates.forEach(function(d, i){
+    var cls = isToday(d) ? ' today-header' : '';
+    r1 += '<th class="day-header'+cls+'" colspan="'+carts.length+'">'+DAYS[i]+
+          '<span class="day-date">'+fmtShort(d)+'</span></th>';
+  });
+  r1 += '</tr>';
 
-    const updates = {
-        status: document.getElementById('m-status').value,
-        repair_cost: document.getElementById('m-cost').value ? parseFloat(document.getElementById('m-cost').value) : null,
-        diagnosis: document.getElementById('m-diagnosis').value.trim() || null,
-        repair_action: document.getElementById('m-repair').value.trim() || null,
-        date_returned: document.getElementById('m-returned').value || null,
-        loaner_returned_at: loanerBack ? new Date().toISOString() : null,
-        loaner_device_id: loanerDeviceId,
-        loaner_sn: loanerSn,
-        notes: document.getElementById('m-notes').value.trim() || null,
-        updated_at: new Date().toISOString()
-    };
+  // Header row 2: cart names
+  var r2 = '<tr>';
+  dates.forEach(function(){
+    carts.forEach(function(c, ci){
+      r2 += '<th class="cart-header'+(ci===0?' day-start':'')+'">Cart '+c+'</th>';
+    });
+  });
+  r2 += '</tr>';
+  document.getElementById('tableHead').innerHTML = r1 + r2;
 
-    const { error } = await sb.from('incidents').update(updates).eq('id', currentId);
-
-    if (error) { el.innerHTML = alert_html('err', error.message); return; }
-
-    // If loaner just marked as returned, free up the device in the pool
-    if (loanerBack) {
-        const { data: incident } = await sb.from('incidents').select('loaner_device_id').eq('id', currentId).single();
-        if (incident?.loaner_device_id) {
-            await sb.from('loaner_devices').update({ available: true }).eq('id', incident.loaner_device_id);
+  // Body rows
+  var tbody = document.getElementById('tableBody');
+  tbody.innerHTML = PERIODS.map(function(p, pi){
+    var cells = '';
+    dates.forEach(function(d){
+      carts.forEach(function(cart, ci){
+        var key  = mkKey(cart, fmtDate(d), p.id);
+        var res  = reservations[key];
+        var past = isPast(d, pi);
+        var sc   = ci===0 ? ' day-start' : '';
+        if (past) {
+          cells += '<td class="slot-cell past'+sc+'"><span class="chip chip-past">'+(res?res.reserved_by:'\u2014')+'</span></td>';
+        } else if (res) {
+          cells += '<td class="slot-cell'+sc+'" data-key="'+key+'" data-action="cancel" style="cursor:pointer"><span class="chip chip-reserved">'+res.reserved_by+'</span></td>';
+        } else {
+          cells += '<td class="slot-cell'+sc+'" data-cart="'+cart+'" data-date="'+fmtDate(d)+'" data-pid="'+p.id+'" data-action="reserve" style="cursor:pointer"><span class="chip chip-available">Available</span></td>';
         }
+      });
+    });
+    return '<tr><td class="period-cell"><div class="period-name">'+p.label+'</div><div class="period-time">'+p.time+'</div></td>'+cells+'</tr>';
+  }).join('');
+
+  tbody.querySelectorAll('[data-action]').forEach(bindSlotClick);
+}
+
+// ── Mobile day picker ─────────────────────────────────────
+function renderDayPicker(dates) {
+  var today = new Date(); today.setHours(0,0,0,0);
+  var isCurrentWeek = dates.some(function(d){ return d.getTime()===today.getTime(); });
+  if (isCurrentWeek) {
+    var ti = dates.findIndex(function(d){ return d.getTime()===today.getTime(); });
+    if (ti >= 0) activeDayIdx = ti;
+  }
+
+  var dp = document.getElementById('dayPicker');
+  dp.innerHTML = DAY_SHORT.map(function(s, i){
+    var d = dates[i];
+    var cls = '';
+    if (i === activeDayIdx) cls += ' active';
+    else if (isToday(d))    cls += ' today-day';
+    return '<button class="day-btn'+cls+'" data-idx="'+i+'">' +
+           '<span class="ds">'+s+'</span><span class="dn">'+fmtShort(d)+'</span></button>';
+  }).join('');
+  dp.querySelectorAll('.day-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+      activeDayIdx = parseInt(b.dataset.idx);
+      renderDayPicker(dates);
+      renderMobile(dates);
+    });
+  });
+}
+
+// ── Mobile single-day grid ────────────────────────────────
+function renderMobile(dates) {
+  var carts = activeGroup.carts;
+  var d     = dates[activeDayIdx];
+
+  document.getElementById('mHeader').innerHTML =
+    '<div class="m-header-cell">Period</div>' +
+    carts.map(function(c){ return '<div class="m-header-cell">Cart '+c+'</div>'; }).join('');
+
+  document.getElementById('mBody').innerHTML = PERIODS.map(function(p, pi){
+    var slots = carts.map(function(cart){
+      var key  = mkKey(cart, fmtDate(d), p.id);
+      var res  = reservations[key];
+      var past = isPast(d, pi);
+      if (past) {
+        return '<div class="m-slot"><span class="chip chip-past">'+(res?res.reserved_by:'\u2014')+'</span></div>';
+      } else if (res) {
+        return '<div class="m-slot" data-key="'+key+'" data-action="cancel" style="cursor:pointer"><span class="chip chip-reserved">'+res.reserved_by+'</span></div>';
+      } else {
+        return '<div class="m-slot" data-cart="'+cart+'" data-date="'+fmtDate(d)+'" data-pid="'+p.id+'" data-action="reserve" style="cursor:pointer"><span class="chip chip-available">Free</span></div>';
+      }
+    }).join('');
+    return '<div class="m-row"><div class="m-period"><div class="period-name">'+p.label+'</div><div class="period-time">'+p.time+'</div></div>'+slots+'</div>';
+  }).join('');
+
+  document.getElementById('mBody').querySelectorAll('[data-action]').forEach(bindSlotClick);
+}
+
+// ── Shared slot click handler ─────────────────────────────
+function bindSlotClick(cell) {
+  cell.addEventListener('click', function(){
+    if (cell.dataset.action === 'reserve') {
+      var per = PERIODS.find(function(p){ return p.id===cell.dataset.pid; });
+      var d   = new Date(cell.dataset.date+'T00:00:00');
+      openReserve(cell.dataset.cart, cell.dataset.date, cell.dataset.pid, per, DAYS[d.getDay()-1]||'');
+    } else {
+      var k   = parseKey(cell.dataset.key);
+      var per = PERIODS.find(function(p){ return p.id===k.pid; });
+      var d2  = new Date(k.date+'T00:00:00');
+      openCancel(k.cart, k.date, k.pid, per, DAYS[d2.getDay()-1]||'', reservations[cell.dataset.key]);
     }
-
-    el.innerHTML = alert_html('ok', 'Saved.');
-    setTimeout(() => { closeModal(); loadOpen(); if (allCache.length) loadAll(); }, 900);
+  });
 }
 
-// ─── REPORTS ────────────────────────────────────────────────────────────────
-
-function loadReports() {
-    loadLoaners();
-    loadCosts();
-    loadRepeat();
+// ── Reserve modal ─────────────────────────────────────────
+function openReserve(cart, date, pid, per, day) {
+  pending = { cart:cart, date:date, pid:pid };
+  document.getElementById('rEyebrow').textContent  = 'Cart ' + cart;
+  document.getElementById('rTitle').textContent    = day + ' \u00b7 ' + per.label;
+  document.getElementById('rSub').textContent      = per.time;
+  document.getElementById('nameInput').value       = '';
+  var btn = document.getElementById('rConfirmBtn');
+  btn.disabled = false; btn.textContent = 'Reserve';
+  document.getElementById('reserveModal').classList.add('active');
+  setTimeout(function(){ document.getElementById('nameInput').focus(); }, 150);
 }
-
-function switchTab(name, btn) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('tab-' + name).classList.add('active');
-    if (name === 'loaners') loadLoaners();
-    if (name === 'costs') loadCosts();
-    if (name === 'repeat') loadRepeat();
-}
-
-async function loadLoaners() {
-    const el = document.getElementById('r-loaners');
-    el.innerHTML = loading();
-
-    const { data, error } = await sb.from('incidents')
-        .select('*')
-        .eq('loaner_provided', true)
-        .is('loaner_returned_at', null)
-        .not('status', 'eq', 'Resolved')
-        .order('created_at', { ascending: true });
-
-    if (error) { el.innerHTML = err_html(error.message); return; }
-    if (!data?.length) { el.innerHTML = empty('✓', 'No loaners currently out.'); return; }
-
-    el.innerHTML = `
-        <div class="stat-row">
-            <div class="stat-box amber">
-                <div class="stat-num">${data.length}</div>
-                <div class="stat-lbl">Loaners Currently Out</div>
-            </div>
-        </div>
-        <div class="table-wrap"><table>
-            <thead><tr><th>Student</th><th>Grade</th><th>Loaner S/N</th><th>Out Since</th><th>Days Out</th><th>Status</th><th></th></tr></thead>
-            <tbody>${data.map(i => {
-                const days = Math.floor((Date.now() - new Date(i.created_at)) / 86400000);
-                return `<tr>
-                    <td><strong>${esc(i.student_name)}</strong></td>
-                    <td>${i.student_grade}th</td>
-                    <td class="mono">${esc(i.loaner_sn||'—')}</td>
-                    <td class="mono">${fdate(i.created_at)}</td>
-                    <td><span class="days-out ${days>14?'days-warn':''}">${days}d</span></td>
-                    <td>${badge(i.status)}</td>
-                    <td><button class="btn btn-ghost btn-sm" onclick="openModal('${i.id}')">Update</button></td>
-                </tr>`;
-            }).join('')}</tbody>
-        </table></div>`;
-}
-
-async function searchStudent() {
-    const q = document.getElementById('r-student-q').value.trim();
-    const el = document.getElementById('r-student');
-
-    if (!q) { el.innerHTML = alert_html('inf', 'Enter a student name to search.'); return; }
-
-    const { data, error } = await sb.from('incidents')
-        .select('*')
-        .ilike('student_name', `%${q}%`)
-        .order('created_at', { ascending: false });
-
-    if (error) { el.innerHTML = err_html(error.message); return; }
-    if (!data?.length) { el.innerHTML = empty('🔍', 'No incidents found for that student.'); return; }
-
-    const totalCost = data.reduce((s, i) => s + (parseFloat(i.repair_cost)||0), 0);
-    const open = data.filter(i => i.status !== 'Resolved').length;
-
-    el.innerHTML = `
-        <div class="stat-row">
-            <div class="stat-box"><div class="stat-num">${data.length}</div><div class="stat-lbl">Total Incidents</div></div>
-            <div class="stat-box amber"><div class="stat-num">${open}</div><div class="stat-lbl">Open Cases</div></div>
-            <div class="stat-box red"><div class="stat-num">$${totalCost.toFixed(2)}</div><div class="stat-lbl">Total Repair Cost</div></div>
-        </div>
-        ${render_table(data, true)}`;
-}
-
-async function loadCosts() {
-    const el = document.getElementById('r-costs');
-    el.innerHTML = loading();
-
-    const { data, error } = await sb.from('incidents')
-        .select('student_name, student_grade, repair_cost, status, created_at')
-        .not('repair_cost', 'is', null)
-        .order('repair_cost', { ascending: false });
-
-    if (error) { el.innerHTML = err_html(error.message); return; }
-    if (!data?.length) { el.innerHTML = empty('💰', 'No repair costs recorded yet.'); return; }
-
-    const total = data.reduce((s, i) => s + parseFloat(i.repair_cost), 0);
-    const avg = total / data.length;
-
-    el.innerHTML = `
-        <div class="stat-row">
-            <div class="stat-box green"><div class="stat-num">$${total.toFixed(2)}</div><div class="stat-lbl">Total Repair Costs</div></div>
-            <div class="stat-box"><div class="stat-num">$${avg.toFixed(2)}</div><div class="stat-lbl">Avg Cost / Incident</div></div>
-            <div class="stat-box"><div class="stat-num">${data.length}</div><div class="stat-lbl">Incidents with Costs</div></div>
-        </div>
-        <div class="table-wrap"><table>
-            <thead><tr><th>Student</th><th>Grade</th><th>Date</th><th>Status</th><th>Cost</th></tr></thead>
-            <tbody>${data.map(i => `<tr>
-                <td><strong>${esc(i.student_name)}</strong></td>
-                <td>${i.student_grade}th</td>
-                <td class="mono">${fdate(i.created_at)}</td>
-                <td>${badge(i.status)}</td>
-                <td class="mono"><strong>$${parseFloat(i.repair_cost).toFixed(2)}</strong></td>
-            </tr>`).join('')}</tbody>
-        </table></div>`;
-}
-
-async function loadRepeat() {
-    const el = document.getElementById('r-repeat');
-    el.innerHTML = loading();
-
-    const { data, error } = await sb.from('incidents')
-        .select('student_name, student_grade')
-        .order('student_name');
-
-    if (error) { el.innerHTML = err_html(error.message); return; }
-    if (!data?.length) { el.innerHTML = empty('🔄', 'No incidents recorded yet.'); return; }
-
-    const counts = {};
-    data.forEach(i => {
-        if (!counts[i.student_name]) counts[i.student_name] = { name: i.student_name, grade: i.student_grade, n: 0 };
-        counts[i.student_name].n++;
+async function doReserve() {
+  var name = document.getElementById('nameInput').value.trim();
+  if (!name) { document.getElementById('nameInput').focus(); return; }
+  var btn = document.getElementById('rConfirmBtn');
+  btn.disabled = true; btn.textContent = 'Saving\u2026';
+  var per = PERIODS.find(function(p){ return p.id===pending.pid; });
+  try {
+    var result = await db.from('cart_reservations').insert({
+      cart_name: pending.cart, reservation_date: pending.date,
+      period_id: pending.pid, period_label: per.label,
+      period_time: per.time, reserved_by: name,
     });
-
-    const sorted = Object.values(counts).sort((a,b) => b.n - a.n).filter(s => s.n >= 2);
-
-    if (!sorted.length) { el.innerHTML = empty('🎉', 'No students with multiple incidents yet.'); return; }
-
-    el.innerHTML = `
-        <p style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Students with 2 or more incidents:</p>
-        <div class="table-wrap"><table>
-            <thead><tr><th>Student</th><th>Grade</th><th>Incidents</th><th></th></tr></thead>
-            <tbody>${sorted.map(s => `<tr>
-                <td><strong>${esc(s.name)}</strong></td>
-                <td>${s.grade}th</td>
-                <td><span class="mono" style="font-size:20px; font-weight:800; color:${s.n>=3?'var(--red)':'var(--amber)'};">${s.n}</span></td>
-                <td><button class="btn btn-ghost btn-sm" onclick="
-                    document.getElementById('r-student-q').value='${esc(s.name)}';
-                    switchTab('student', document.querySelectorAll('.tab-btn')[1]);
-                    searchStudent();
-                ">View History</button></td>
-            </tr>`).join('')}</tbody>
-        </table></div>`;
+    if (result.error) {
+      showToast(result.error.code==='23505' ? 'That slot was just taken \u2014 try another!' : 'Error: '+result.error.message, 'error');
+    } else {
+      showToast('Reserved for ' + name + ' \u2713');
+      closeModals(); await loadAndRender();
+    }
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+  btn.disabled = false; btn.textContent = 'Reserve';
 }
 
-// ─── HELPERS ────────────────────────────────────────────────────────────────
-
-function badge(status) {
-    const map = { 'Pending':'pending','In Repair':'in-repair','Waiting on Parts':'waiting','Resolved':'resolved','Sent Out':'sent-out' };
-    return `<span class="badge badge-${map[status]||'pending'}">${status}</span>`;
+// ── Cancel modal ──────────────────────────────────────────
+function openCancel(cart, date, pid, per, day, res) {
+  pending = { resId: res.id };
+  document.getElementById('cEyebrow').textContent = 'Cart ' + cart;
+  document.getElementById('cTitle').textContent   = day + ' \u00b7 ' + per.label;
+  document.getElementById('cSub').textContent     = per.time;
+  document.getElementById('cName').textContent    = res.reserved_by;
+  var btn = document.getElementById('cCancelBtn');
+  btn.disabled = false; btn.textContent = 'Cancel reservation';
+  document.getElementById('cancelModal').classList.add('active');
+}
+async function doCancel() {
+  var btn = document.getElementById('cCancelBtn');
+  btn.disabled = true; btn.textContent = 'Removing\u2026';
+  try {
+    var result = await db.from('cart_reservations').delete().eq('id', pending.resId);
+    if (result.error) { showToast('Error: '+result.error.message, 'error'); }
+    else { showToast('Reservation cancelled'); closeModals(); await loadAndRender(); }
+  } catch(e) { showToast('Error: '+e.message, 'error'); }
+  btn.disabled = false; btn.textContent = 'Cancel reservation';
 }
 
-function fdate(ts) {
-    if (!ts) return '—';
-    return new Date(ts).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+// ── Utils ─────────────────────────────────────────────────
+function closeModals() {
+  document.getElementById('reserveModal').classList.remove('active');
+  document.getElementById('cancelModal').classList.remove('active');
+  pending = null;
+}
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type==='error' ? ' error' : '');
+  setTimeout(function(){ t.classList.remove('show'); }, 3200);
+}
+function bindEvents() {
+  document.getElementById('prevWeek').addEventListener('click',  function(){ weekOffset--; loadAndRender(); });
+  document.getElementById('nextWeek').addEventListener('click',  function(){ weekOffset++; loadAndRender(); });
+  document.getElementById('todayBtn').addEventListener('click',  function(){ weekOffset=0; loadAndRender(); });
+  document.getElementById('rCancelBtn').addEventListener('click', closeModals);
+  document.getElementById('rConfirmBtn').addEventListener('click', doReserve);
+  document.getElementById('cKeepBtn').addEventListener('click',   closeModals);
+  document.getElementById('cCancelBtn').addEventListener('click', doCancel);
+  document.getElementById('nameInput').addEventListener('keydown', function(e){ if(e.key==='Enter') doReserve(); });
+  ['reserveModal','cancelModal'].forEach(function(id){
+    document.getElementById(id).addEventListener('click', function(e){ if(e.target===e.currentTarget) closeModals(); });
+  });
 }
 
-function esc(str) {
-    if (!str) return '—';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+// ── Boot ──────────────────────────────────────────────────
+function init() {
+  document.body.className = 'grade-' + activeGroup.id;
+  renderTabs();
+  bindEvents();
+  loadAndRender();
 }
-
-function alert_html(type, msg) {
-    const cls = { ok:'alert-ok', err:'alert-err', inf:'alert-inf' };
-    return `<div class="alert ${cls[type]}">${msg}</div>`;
-}
-
-function loading() { return `<div class="empty"><div class="empty-icon">⏳</div>Loading...</div>`; }
-function empty(icon, msg) { return `<div class="empty"><div class="empty-icon">${icon}</div>${msg}</div>`; }
-function err_html(msg) { return `<div class="alert alert-err" style="margin:16px;">${msg}</div>`; }
-
-// ─── LOANS ───────────────────────────────────────────────────────────────────
-
-let loanerPool = [];
-
-async function populateLoanerDropdown(selectId) {
-    const { data } = await sb.from('loaner_devices').select('*').eq('available', true).order('serial_number');
-    const sel = document.getElementById(selectId);
-    if (!sel) return;
-    const available = data || [];
-    sel.innerHTML = available.length
-        ? `<option value="">Select a loaner device...</option>` + available.map(d =>
-            `<option value="${d.id}">${d.serial_number}${d.asset_tag ? ' — ' + d.asset_tag : ''}${d.notes ? ' (' + d.notes + ')' : ''}</option>`
-          ).join('')
-        : `<option value="">⚠ No loaners available</option>`;
-}
-
-async function loadLoans() {
-    await loadLoanerPool();
-    loadPoolBar();
-    loadActiveLoans();
-    loadLoanHistory();
-}
-
-async function loadLoanerPool() {
-    const { data } = await sb.from('loaner_devices').select('*').order('serial_number');
-    loanerPool = data || [];
-    await populateLoanerDropdown('ln-device');
-}
-
-function loadPoolBar() {
-    const el = document.getElementById('loan-pool-bar');
-    if (!el || !loanerPool.length) return;
-    const total = loanerPool.length;
-    const available = loanerPool.filter(d => d.available).length;
-    const out = total - available;
-    const pct = Math.round((out / total) * 100);
-    const color = available === 0 ? '#dc2626' : available === 1 ? '#d97706' : '#15803d';
-    el.innerHTML = `
-        <div style="display:flex;align-items:center;gap:16px;padding:14px 18px;background:#fff;border:1px solid var(--border);border-radius:8px;border-left:4px solid ${color};">
-            <div style="font-size:28px;font-weight:800;color:${color};font-family:var(--mono);">${available}</div>
-            <div>
-                <div style="font-size:13px;font-weight:700;color:var(--text);">of ${total} loaners available</div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${out} currently out${available === 0 ? ' — no spares left' : ''}</div>
-            </div>
-            <div style="flex:1;background:var(--bg-subtle);border-radius:4px;height:6px;overflow:hidden;margin-left:8px;">
-                <div style="height:100%;background:${color};width:${pct}%;border-radius:4px;transition:width .3s;"></div>
-            </div>
-        </div>`;
-}
-
-async function loadActiveLoans() {
-    const el = document.getElementById('loan-active-list');
-    if (!el) return;
-    el.innerHTML = loading();
-    const { data, error } = await sb.from('loaner_loans')
-        .select('*, loaner_devices(serial_number, asset_tag)')
-        .is('returned_at', null)
-        .order('created_at', { ascending: true });
-
-    if (error) { el.innerHTML = err_html(error.message); return; }
-    if (!data?.length) { el.innerHTML = empty('✓', 'No active loans — all devices accounted for.'); return; }
-
-    el.innerHTML = `<div class="table-wrap"><table>
-        <thead><tr><th>Student</th><th>Grade</th><th>Reason</th><th>Device S/N</th><th>Out Since</th><th>Days Out</th><th></th></tr></thead>
-        <tbody>${data.map(l => {
-            const days = Math.floor((Date.now() - new Date(l.created_at)) / 86400000);
-            const sn = l.loaner_devices?.serial_number || l.loaner_asset_tag || '—';
-            const warn = days >= 3;
-            return `<tr>
-                <td><strong>${esc(l.student_name)}</strong></td>
-                <td>${l.student_grade ? l.student_grade + 'th' : '—'}</td>
-                <td>${esc(l.reason)}</td>
-                <td class="mono">${esc(sn)}</td>
-                <td class="mono">${fdate(l.created_at)}</td>
-                <td><span class="days-out ${warn ? 'days-warn' : ''}">${days}d</span></td>
-                <td><button class="btn btn-ghost btn-sm" onclick="returnLoan('${l.id}','${l.loaner_device_id}')">Return</button></td>
-            </tr>`;
-        }).join('')}</tbody>
-    </table></div>`;
-}
-
-async function loadLoanHistory() {
-    const el = document.getElementById('loan-history-list');
-    if (!el) return;
-    el.innerHTML = loading();
-    const { data, error } = await sb.from('loaner_loans')
-        .select('*, loaner_devices(serial_number, asset_tag)')
-        .not('returned_at', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(50);
-
-    if (error) { el.innerHTML = err_html(error.message); return; }
-    if (!data?.length) { el.innerHTML = empty('📋', 'No loan history yet.'); return; }
-
-    el.innerHTML = `<div class="table-wrap"><table>
-        <thead><tr><th>Student</th><th>Grade</th><th>Reason</th><th>Device S/N</th><th>Issued</th><th>Returned</th></tr></thead>
-        <tbody>${data.map(l => {
-            const sn = l.loaner_devices?.serial_number || '—';
-            return `<tr>
-                <td><strong>${esc(l.student_name)}</strong></td>
-                <td>${l.student_grade ? l.student_grade + 'th' : '—'}</td>
-                <td>${esc(l.reason)}</td>
-                <td class="mono">${esc(sn)}</td>
-                <td class="mono">${fdate(l.created_at)}</td>
-                <td class="mono">${fdate(l.returned_at)}</td>
-            </tr>`;
-        }).join('')}</tbody>
-    </table></div>`;
-}
-
-async function submitLoan() {
-    const alert = document.getElementById('loan-alert');
-    const first = document.getElementById('ln-firstname').value.trim();
-    const last = document.getElementById('ln-lastinitial').value.trim().toUpperCase();
-    const grade = document.getElementById('ln-grade').value;
-    const reason = document.getElementById('ln-reason').value;
-    const deviceId = document.getElementById('ln-device').value;
-    const notes = document.getElementById('ln-notes').value.trim();
-
-    if (!first || !last) { alert.innerHTML = alert_html('err', 'First name and last initial are required.'); return; }
-    if (!reason) { alert.innerHTML = alert_html('err', 'Please select a reason.'); return; }
-    if (!deviceId) { alert.innerHTML = alert_html('err', 'Please select a loaner device.'); return; }
-
-    const { data: { session } } = await sb.auth.getSession();
-    const loggedBy = session?.user?.email || '';
-    const device = loanerPool.find(d => d.id === deviceId);
-
-    const { error: loanErr } = await sb.from('loaner_loans').insert({
-        student_name: first + ' ' + last + '.',
-        student_grade: grade,
-        reason,
-        loaner_device_id: deviceId,
-        loaner_asset_tag: device?.serial_number || '',
-        logged_by: loggedBy,
-        notes
-    });
-    if (loanErr) { alert.innerHTML = alert_html('err', loanErr.message); return; }
-
-    // Mark device unavailable
-    await sb.from('loaner_devices').update({ available: false }).eq('id', deviceId);
-
-    alert.innerHTML = alert_html('ok', `Loan issued to ${first} ${last}. Device ${device?.serial_number} is now checked out.`);
-    clearLoanForm();
-    loadLoans();
-}
-
-async function returnLoan(loanId, deviceId) {
-    if (!confirm('Mark this device as returned?')) return;
-    await sb.from('loaner_loans').update({ returned_at: new Date().toISOString() }).eq('id', loanId);
-    await sb.from('loaner_devices').update({ available: true }).eq('id', deviceId);
-    loadLoans();
-}
-
-function clearLoanForm() {
-    ['ln-firstname','ln-lastinitial','ln-notes'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('ln-grade').value = '';
-    document.getElementById('ln-reason').value = '';
-    loadLoanerPool(); // refresh dropdown
-}
-
-function switchLoanTab(name, btn) {
-    document.querySelectorAll('#view-loans .tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('#view-loans .tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    document.getElementById('ltab-' + name).classList.add('active');
-    if (name === 'active') loadActiveLoans();
-    if (name === 'history') loadLoanHistory();
-    if (name === 'new') loadLoanerPool();
-}
-
 init();
 </script>
 </body>
